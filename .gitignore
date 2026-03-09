@@ -1,0 +1,51 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### Secrets & credentials — NEVER commit these ###
+*.pem
+*.key
+*.p12
+*.jks
+*.pfx
+
+### Runtime infrastructure state files ###
+.k8s-agent-state
+.k8s-cluster-state
+
+### Local scratch / convenience files with live IPs or commands ###
+commands.txt
+
+### Local Spring profile overrides (may contain real credentials) ###
+src/main/resources/application-local.yml
+src/test/resources/application-local.yml
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/

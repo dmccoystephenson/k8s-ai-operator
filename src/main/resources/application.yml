@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: k8s-ai-operator
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+aws:
+  region: ${AWS_REGION:us-east-1}
+  bedrock:
+    model-id: ${BEDROCK_MODEL_ID:anthropic.claude-3-sonnet-20240229-v1:0}
+    max-tokens: ${BEDROCK_MAX_TOKENS:512}
+  dynamodb:
+    table-name: ${DYNAMODB_TABLE:K8sAgentExecutions}
+  cloudwatch:
+    namespace: ${CLOUDWATCH_NAMESPACE:K8sAiOperator/Execution}
+
+k8s:
+  allowed-verbs: get,apply
+  disallowed-verbs: delete,exec,scale,patch
+

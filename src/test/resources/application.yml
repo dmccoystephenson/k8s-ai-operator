@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: k8s-ai-operator-test
+
+aws:
+  region: us-east-1
+  bedrock:
+    model-id: anthropic.claude-3-sonnet-20240229-v1:0
+    max-tokens: 512
+  dynamodb:
+    table-name: K8sAgentExecutions
+  cloudwatch:
+    namespace: K8sAiOperator/Execution
+
+k8s:
+  allowed-verbs: get,apply
+  disallowed-verbs: delete,exec,scale,patch
+

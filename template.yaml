@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: k8s-ai-operator — AI-powered Kubernetes operator via API Gateway + Lambda
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: java21
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        AWS_REGION_OVERRIDE: !Ref AWS::Region
+        SPRING_PROFILES_ACTIVE: lambda
+
+Parameters:
+  DynamoDbTableName:
+    Type: String
+    Default: K8sAgentExecutions
+  CloudWatchNamespace:
+    Type: String
+    Default: K8sAiOperator/Execution
+  BedrockModelId:
+    Type: String
+    Default: anthropic.claude-3-sonnet-20240229-v1:0
+  BedrockMaxTokens:
+    Type: Number
+    Default: 512
+
+Resources:
+
+  # ── DynamoDB Audit Table ──────────────────────────────────────────────────
+  K8sAgentExecutionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DynamoDbTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: request_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: request_id
+          KeyType: HASH
+
+  # ── IAM Role ─────────────────────────────────────────────────────────────
+  K8sOperatorExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: k8s-ai-operator-execution-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: k8s-ai-operator-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                Resource: !GetAtt K8sAgentExecutionsTable.Arn
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: !Ref CloudWatchNamespace
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+
+  # ── Lambda Function ───────────────────────────────────────────────────────
+  K8sOperatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: k8s-ai-operator
+      Handler: org.springframework.cloud.function.adapter.aws.FunctionInvoker::handleRequest
+      CodeUri: target/k8s-ai-operator-0.0.1-SNAPSHOT.jar
+      Role: !GetAtt K8sOperatorExecutionRole.Arn
+      Environment:
+        Variables:
+          AWS_REGION: !Ref AWS::Region
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          BEDROCK_MAX_TOKENS: !Ref BedrockMaxTokens
+          DYNAMODB_TABLE: !Ref DynamoDbTableName
+          CLOUDWATCH_NAMESPACE: !Ref CloudWatchNamespace
+      Events:
+        Execute:
+          Type: Api
+          Properties:
+            RestApiId: !Ref K8sOperatorApi
+            Path: /k8s/execute
+            Method: POST
+
+  # ── API Gateway ───────────────────────────────────────────────────────────
+  K8sOperatorApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: k8s-ai-operator-api
+      StageName: prod
+      EndpointConfiguration:
+        Type: REGIONAL
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint for k8s/execute
+    Value: !Sub https://${K8sOperatorApi}.execute-api.${AWS::Region}.amazonaws.com/prod/k8s/execute
+
+  FunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt K8sOperatorFunction.Arn
+
+  DynamoDbTableArn:
+    Description: DynamoDB audit table ARN
+    Value: !GetAtt K8sAgentExecutionsTable.Arn
+

@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-ai-operator
+---
+# ── DynamoDB audit table ───────────────────────────────────────────────────────
+# Create the table with AWS CLI before applying this manifest (see deploy.sh).
+# ──────────────────────────────────────────────────────────────────────────────
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k8s-ai-operator-config
+  namespace: k8s-ai-operator
+data:
+  AWS_REGION: "us-east-2"
+  BEDROCK_MODEL_ID: "anthropic.claude-3-sonnet-20240229-v1:0"
+  BEDROCK_MAX_TOKENS: "512"
+  DYNAMODB_TABLE: "K8sAgentExecutions"
+  CLOUDWATCH_NAMESPACE: "K8sAiOperator/Execution"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-ai-operator
+  namespace: k8s-ai-operator
+  labels:
+    app: k8s-ai-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-ai-operator
+  template:
+    metadata:
+      labels:
+        app: k8s-ai-operator
+    spec:
+      containers:
+        - name: k8s-ai-operator
+          image: ACCOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/k8s-ai-operator:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: k8s-ai-operator-config
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-ai-operator
+  namespace: k8s-ai-operator
+spec:
+  type: LoadBalancer
+  selector:
+    app: k8s-ai-operator
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+
