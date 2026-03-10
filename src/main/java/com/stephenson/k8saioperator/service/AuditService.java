@@ -3,6 +3,7 @@ package com.stephenson.k8saioperator.service;
 import com.stephenson.k8saioperator.model.ParsedCommand;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -18,7 +19,8 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-public class AuditService {
+@Profile("!local")
+public class AuditService implements AuditPort {
 
     private final DynamoDbClient dynamoDbClient;
     private final String tableName;

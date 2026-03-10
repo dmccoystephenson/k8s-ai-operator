@@ -1,0 +1,19 @@
+# ── Build stage ──────────────────────────────────────────────────────────────
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /build
+
+# Copy Maven wrapper and POM first to cache the dependency download layer
+COPY mvnw pom.xml ./
+COPY .mvn .mvn
+RUN ./mvnw dependency:go-offline -q
+
+# Copy source and build the fat JAR (skip tests; they run in CI)
+COPY src src
+RUN ./mvnw package -DskipTests -q
+
+# ── Runtime stage ─────────────────────────────────────────────────────────────
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=build /build/target/k8s-ai-operator-*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

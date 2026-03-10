@@ -206,6 +206,8 @@ All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
 > **New to this project? Start here → [docs/user-guide.md](docs/user-guide.md)**
 > A complete step-by-step guide from zero to a running deployment, no prior Kubernetes experience needed.
 
+> **Want to run locally without AWS? → [docs/local-development.md](docs/local-development.md)**
+
 **Prerequisites**
 
 - Java 21
@@ -217,7 +219,21 @@ All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
 
     mvn clean package
 
-**Run locally**
+**Run locally (no AWS required)**
+
+The `local` Spring profile replaces all AWS-backed services with in-process
+no-op implementations. No credentials or infrastructure are needed.
+
+    # Docker Compose (recommended)
+    docker compose up --build
+
+    # Maven
+    SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run
+
+See [docs/local-development.md](docs/local-development.md) for full details,
+example requests, and keyword-parser reference.
+
+**Run with AWS SAM**
 
     sam local start-api
 

@@ -1,11 +1,11 @@
 package com.stephenson.k8saioperator.controller;
 
-import com.stephenson.k8saioperator.metrics.CloudWatchMetricsEmitter;
+import com.stephenson.k8saioperator.metrics.MetricsEmitter;
 import com.stephenson.k8saioperator.model.ExecuteRequest;
 import com.stephenson.k8saioperator.model.ExecuteResponse;
 import com.stephenson.k8saioperator.model.ParsedCommand;
-import com.stephenson.k8saioperator.service.AuditService;
-import com.stephenson.k8saioperator.service.BedrockCommandParser;
+import com.stephenson.k8saioperator.service.AuditPort;
+import com.stephenson.k8saioperator.service.CommandParser;
 import com.stephenson.k8saioperator.service.K8sClientAdapter;
 import com.stephenson.k8saioperator.service.VerbGuard;
 import lombok.RequiredArgsConstructor;
@@ -32,11 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class K8sExecuteController {
 
-    private final BedrockCommandParser bedrockCommandParser;
+    private final CommandParser commandParser;
     private final VerbGuard verbGuard;
     private final K8sClientAdapter k8sClientAdapter;
-    private final AuditService auditService;
-    private final CloudWatchMetricsEmitter metricsEmitter;
+    private final AuditPort auditService;
+    private final MetricsEmitter metricsEmitter;
 
     @PostMapping("/execute")
     public ResponseEntity<ExecuteResponse> execute(@RequestBody ExecuteRequest request) {
@@ -45,7 +45,7 @@ public class K8sExecuteController {
         ParsedCommand command = null;
         try {
             // Step 1 — parse (user prompt is never logged)
-            command = bedrockCommandParser.parse(request.getUserPrompt());
+            command = commandParser.parse(request.getUserPrompt());
 
             // Step 2 — enforce verb allowlist
             if (!verbGuard.isAllowed(command.getVerb())) {
