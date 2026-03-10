@@ -145,8 +145,9 @@ The `LocalBedrockCommandParser` translates prompts using simple keyword matching
 
 ### Namespace resolution
 
-The parser looks for the pattern **"in \<word\>"** or **"namespace \<word\>"** in the
-prompt.  If no pattern is found, the namespace defaults to `default`.
+The parser looks for **"namespace \<word\>"** first; if not found, it falls back to
+**"in \<word\>"** (skipping the literal word `namespace`).  If no pattern is found,
+the namespace defaults to `default`.
 
 ---
 

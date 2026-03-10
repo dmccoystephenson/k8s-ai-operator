@@ -59,7 +59,7 @@ class LocalBedrockCommandParserTest {
     }
 
     @Test
-    void resolvesDeployVerbAsApply() {
+    void resolvesCreateVerbAsApply() {
         ParsedCommand cmd = parser.parse("create a new deployment in staging");
         assertEquals("apply", cmd.getVerb());
     }
