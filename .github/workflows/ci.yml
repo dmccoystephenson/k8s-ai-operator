@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ── Full test suite (default profile, AWS beans mocked via @MockBean) ──────
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run all tests
+        run: ./mvnw --batch-mode test
+
+  # ── Local profile: proves the no-op implementations wire correctly ─────────
+  local-profile:
+    name: Local Profile (No-Op) Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run local-profile tests
+        # Explicitly targets the four test classes that exercise the local
+        # no-op path: context wiring, command parsing, audit, and metrics.
+        # No AWS credentials are required — LocalBedrockCommandParser,
+        # NoOpAuditService, and NoOpMetricsEmitter are pure Java.
+        run: |
+          ./mvnw --batch-mode test \
+            -Dtest="LocalProfileApplicationTests,LocalBedrockCommandParserTest,NoOpAuditServiceTest,NoOpMetricsEmitterTest" \
+            -DSPRING_PROFILES_ACTIVE=local
