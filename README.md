@@ -156,7 +156,7 @@ All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
     k8s-ai-operator/
     ├── src/
     │   └── main/
-    │       ├── java/com/example/k8saioperator/
+    │       ├── java/com/stephenson/k8saioperator/
     │       │   ├── K8sAiOperatorApplication.java
     │       │   ├── controller/
     │       │   │   └── K8sExecuteController.java
@@ -174,7 +174,9 @@ All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
     │       └── resources/
     │           └── application.yml
     ├── src/test/
-    │   └── java/com/example/k8saioperator/
+    │   └── java/com/stephenson/k8saioperator/
+    │       ├── K8sAiOperatorApplicationTests.java
+    │       ├── BedrockCommandParserTest.java
     │       ├── VerbGuardTest.java
     │       └── K8sExecuteControllerTest.java
     ├── template.yaml          # AWS SAM deployment template
