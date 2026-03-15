@@ -152,7 +152,7 @@ curl -s -X POST http://<ENDPOINT>/k8s/execute \
 **Response:**
 ```json
 {
-  "requestId": "req-001",
+  "request_id": "req-001",
   "allowed": true,
   "command": {
     "verb": "get",
@@ -201,7 +201,7 @@ curl -s -X POST http://<ENDPOINT>/k8s/execute \
 **Response (`400 Bad Request`):**
 ```json
 {
-  "requestId": "req-004",
+  "request_id": "req-004",
   "allowed": false,
   "reason": "Verb 'delete' is not permitted"
 }

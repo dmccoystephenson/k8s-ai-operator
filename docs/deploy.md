@@ -48,7 +48,7 @@ That's it. The script handles every step below automatically. Read on if you wan
 ```bash
 ./mvnw clean package -DskipTests
 ```
-Compiles the Spring Boot app and produces `target/edgescaleai-tech-interview-*.jar`.
+Compiles the Spring Boot app and produces `target/k8s-ai-operator-0.0.1-SNAPSHOT.jar`.
 
 ---
 
@@ -141,7 +141,7 @@ curl -s -X POST http://<ENDPOINT>/k8s/execute \
 Expected response:
 ```json
 {
-  "requestId": "test-001",
+  "request_id": "test-001",
   "allowed": true,
   "command": { "verb": "get", "resource": "pods", "namespace": "production" },
   "result": "NAME   READY   STATUS ..."
@@ -158,7 +158,7 @@ curl -s -X POST http://<ENDPOINT>/k8s/execute \
 Expected response:
 ```json
 {
-  "requestId": "test-002",
+  "request_id": "test-002",
   "allowed": false,
   "reason": "Verb 'delete' is not permitted"
 }
