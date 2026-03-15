@@ -48,7 +48,7 @@ That's it. The script handles every step below automatically. Read on if you wan
 ```bash
 ./mvnw clean package -DskipTests
 ```
-Compiles the Spring Boot app and produces `target/k8s-ai-operator-0.0.1-SNAPSHOT.jar`.
+Compiles the Spring Boot app and produces a JAR under `target/k8s-ai-operator-*.jar`.
 
 ---
 

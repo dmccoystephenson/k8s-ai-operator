@@ -160,14 +160,14 @@ On your **local machine**, build the fat JAR:
 mvn clean package -DskipTests
 ```
 
-This produces `target/k8s-ai-operator-0.0.1-SNAPSHOT.jar`.
+This produces a JAR under `target/k8s-ai-operator-*.jar`.
 
 Copy it to the instance:
 
 ```bash
 source .k8s-agent-state
 scp -i k8s-agent-key.pem \
-  target/k8s-ai-operator-0.0.1-SNAPSHOT.jar \
+  target/k8s-ai-operator-*.jar \
   ubuntu@"$PUBLIC_IP":~/app.jar
 ```
 
