@@ -5,7 +5,7 @@ import com.stephenson.k8saioperator.controller.K8sExecuteController;
 import com.stephenson.k8saioperator.metrics.CloudWatchMetricsEmitter;
 import com.stephenson.k8saioperator.model.ParsedCommand;
 import com.stephenson.k8saioperator.service.AuditService;
-import com.stephenson.k8saioperator.service.BedrockCommandParser;
+import com.stephenson.k8saioperator.service.CommandParser;
 import com.stephenson.k8saioperator.service.K8sClientAdapter;
 import com.stephenson.k8saioperator.service.VerbGuard;
 import org.junit.jupiter.api.Test;
@@ -36,7 +36,7 @@ class K8sExecuteControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private BedrockCommandParser bedrockCommandParser;
+    private CommandParser commandParser;
 
     @MockBean
     private VerbGuard verbGuard;
@@ -58,7 +58,7 @@ class K8sExecuteControllerTest {
                 .namespace("production")
                 .build();
 
-        when(bedrockCommandParser.parse(anyString())).thenReturn(deleteCommand);
+        when(commandParser.parse(anyString())).thenReturn(deleteCommand);
         when(verbGuard.isAllowed("delete")).thenReturn(false);
 
         String requestBody = """
@@ -85,7 +85,7 @@ class K8sExecuteControllerTest {
                 .namespace("production")
                 .build();
 
-        when(bedrockCommandParser.parse(anyString())).thenReturn(getCommand);
+        when(commandParser.parse(anyString())).thenReturn(getCommand);
         when(verbGuard.isAllowed("get")).thenReturn(true);
         when(k8sClientAdapter.execute(any(ParsedCommand.class))).thenReturn("NAME  READY  STATUS\napp-pod  1/1  Running");
 
@@ -116,7 +116,7 @@ class K8sExecuteControllerTest {
                 .namespace("default")
                 .build();
 
-        when(bedrockCommandParser.parse(anyString())).thenReturn(execCommand);
+        when(commandParser.parse(anyString())).thenReturn(execCommand);
         when(verbGuard.isAllowed("exec")).thenReturn(false);
 
         String requestBody = """

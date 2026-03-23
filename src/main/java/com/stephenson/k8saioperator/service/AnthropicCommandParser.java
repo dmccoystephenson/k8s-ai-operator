@@ -9,26 +9,30 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
-import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest;
-import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelResponse;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 
 /**
- * Calls Amazon Bedrock (Claude) to translate a natural-language user prompt
- * into a structured {@link ParsedCommand}.
+ * Calls the Anthropic Messages API directly to translate a natural-language
+ * user prompt into a structured {@link ParsedCommand}.
  *
  * Enforces:
  * - Max 1 command per request (multi-command responses → exception)
- * - Max token cap on the Bedrock call
+ * - Max token cap on the API call
  * - User prompts are never logged
  */
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "llm.provider", havingValue = "bedrock", matchIfMissing = true)
-public class BedrockCommandParser implements CommandParser {
+@ConditionalOnProperty(name = "llm.provider", havingValue = "anthropic")
+public class AnthropicCommandParser implements CommandParser {
+
+    private static final String ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+    private static final String ANTHROPIC_VERSION = "2023-06-01";
 
     private static final String SYSTEM_PROMPT =
             "You are a Kubernetes operations assistant. Translate the user's natural language " +
@@ -39,71 +43,81 @@ public class BedrockCommandParser implements CommandParser {
             "Return ONLY the raw JSON object with no markdown, no explanation, and no extra text. " +
             "If the user's intent maps to more than one command, return only the most important one.";
 
-    private final BedrockRuntimeClient bedrockClient;
+    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final String modelId;
+    private final String apiKey;
+    private final String model;
     private final int maxTokens;
 
-    public BedrockCommandParser(
-            BedrockRuntimeClient bedrockClient,
+    public AnthropicCommandParser(
             ObjectMapper objectMapper,
-            @Value("${aws.bedrock.model-id}") String modelId,
-            @Value("${aws.bedrock.max-tokens}") int maxTokens) {
-        this.bedrockClient = bedrockClient;
+            @Value("${anthropic.api-key}") String apiKey,
+            @Value("${anthropic.model}") String model,
+            @Value("${anthropic.max-tokens}") int maxTokens) {
+        this(HttpClient.newHttpClient(), objectMapper, apiKey, model, maxTokens);
+    }
+
+    public AnthropicCommandParser(
+            HttpClient httpClient,
+            ObjectMapper objectMapper,
+            String apiKey,
+            String model,
+            int maxTokens) {
+        this.httpClient = httpClient;
         this.objectMapper = objectMapper;
-        this.modelId = modelId;
+        this.apiKey = apiKey;
+        this.model = model;
         this.maxTokens = maxTokens;
     }
 
-    /**
-     * Parses the user prompt into a {@link ParsedCommand}.
-     * The user prompt is never logged.
-     *
-     * @param userPrompt natural language input from the operator
-     * @return structured command parsed by the model
-     * @throws IllegalStateException if the model returns an unparseable or multi-command response
-     */
+    @Override
     public ParsedCommand parse(String userPrompt) {
         String requestBody = buildRequestBody(userPrompt);
 
-        log.debug("Invoking Bedrock model: {}", modelId);
+        log.debug("Invoking Anthropic model: {}", model);
 
-        InvokeModelRequest request = InvokeModelRequest.builder()
-                .modelId(modelId)
-                .contentType("application/json")
-                .accept("application/json")
-                .body(SdkBytes.fromUtf8String(requestBody))
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(ANTHROPIC_API_URL))
+                .header("content-type", "application/json")
+                .header("x-api-key", apiKey)
+                .header("anthropic-version", ANTHROPIC_VERSION)
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
-        InvokeModelResponse response = bedrockClient.invokeModel(request);
-        String responseBody = response.body().asUtf8String();
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        return parseResponse(responseBody);
+            if (response.statusCode() != 200) {
+                throw new IllegalStateException(
+                        "Anthropic API returned status " + response.statusCode() + ": " + response.body());
+            }
+
+            return parseResponse(response.body());
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to call Anthropic API: " + e.getMessage(), e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Anthropic API call was interrupted", e);
+        }
     }
 
     private String buildRequestBody(String userPrompt) {
         try {
             ObjectNode root = objectMapper.createObjectNode();
-            root.put("anthropic_version", "bedrock-2023-05-31");
+            root.put("model", model);
             root.put("max_tokens", maxTokens);
             root.put("system", SYSTEM_PROMPT);
 
             ArrayNode messages = objectMapper.createArrayNode();
             ObjectNode message = objectMapper.createObjectNode();
             message.put("role", "user");
-
-            ArrayNode content = objectMapper.createArrayNode();
-            ObjectNode textBlock = objectMapper.createObjectNode();
-            textBlock.put("type", "text");
-            textBlock.put("text", userPrompt);
-            content.add(textBlock);
-            message.set("content", content);
+            message.put("content", userPrompt);
             messages.add(message);
             root.set("messages", messages);
 
             return objectMapper.writeValueAsString(root);
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to build Bedrock request body", e);
+            throw new IllegalStateException("Failed to build Anthropic request body", e);
         }
     }
 
@@ -113,10 +127,9 @@ public class BedrockCommandParser implements CommandParser {
             JsonNode contentArray = root.path("content");
 
             if (!contentArray.isArray() || contentArray.isEmpty()) {
-                throw new IllegalStateException("Bedrock returned empty content array");
+                throw new IllegalStateException("Anthropic API returned empty content array");
             }
 
-            // Collect all text blocks — reject if more than one command is present
             List<JsonNode> textBlocks = new java.util.ArrayList<>();
             for (JsonNode block : contentArray) {
                 if ("text".equals(block.path("type").asText())) {
@@ -125,10 +138,9 @@ public class BedrockCommandParser implements CommandParser {
             }
 
             if (textBlocks.isEmpty()) {
-                throw new IllegalStateException("No text content block in Bedrock response");
+                throw new IllegalStateException("No text content block in Anthropic response");
             }
 
-            // Extract the text from the first (and only expected) block
             String jsonText = textBlocks.get(0).path("text").asText().trim();
 
             // Strip any accidental markdown fencing
@@ -138,9 +150,9 @@ public class BedrockCommandParser implements CommandParser {
 
             JsonNode commandNode = objectMapper.readTree(jsonText);
 
-            // Reject multi-command responses — the model must return a single object, not an array
             if (commandNode.isArray()) {
-                throw new IllegalStateException("Model returned multiple commands — only one command per request is permitted");
+                throw new IllegalStateException(
+                        "Model returned multiple commands — only one command per request is permitted");
             }
 
             return ParsedCommand.builder()
@@ -152,8 +164,8 @@ public class BedrockCommandParser implements CommandParser {
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to parse Bedrock response into a command: " + e.getMessage(), e);
+            throw new IllegalStateException(
+                    "Failed to parse Anthropic response into a command: " + e.getMessage(), e);
         }
     }
 }
-

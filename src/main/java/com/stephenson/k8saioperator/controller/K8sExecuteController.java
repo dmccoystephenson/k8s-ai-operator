@@ -5,7 +5,7 @@ import com.stephenson.k8saioperator.model.ExecuteRequest;
 import com.stephenson.k8saioperator.model.ExecuteResponse;
 import com.stephenson.k8saioperator.model.ParsedCommand;
 import com.stephenson.k8saioperator.service.AuditService;
-import com.stephenson.k8saioperator.service.BedrockCommandParser;
+import com.stephenson.k8saioperator.service.CommandParser;
 import com.stephenson.k8saioperator.service.K8sClientAdapter;
 import com.stephenson.k8saioperator.service.VerbGuard;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Exposes POST /k8s/execute.
  *
  * Request flow:
- * 1. Parse user prompt via Bedrock
+ * 1. Parse user prompt via the configured LLM provider
  * 2. Enforce verb allowlist (VerbGuard)
  * 3. Execute against mock K8s client
  * 4. Persist audit record in DynamoDB
@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class K8sExecuteController {
 
-    private final BedrockCommandParser bedrockCommandParser;
+    private final CommandParser commandParser;
     private final VerbGuard verbGuard;
     private final K8sClientAdapter k8sClientAdapter;
     private final AuditService auditService;
@@ -45,7 +45,7 @@ public class K8sExecuteController {
         ParsedCommand command = null;
         try {
             // Step 1 — parse (user prompt is never logged)
-            command = bedrockCommandParser.parse(request.getUserPrompt());
+            command = commandParser.parse(request.getUserPrompt());
 
             // Step 2 — enforce verb allowlist
             if (!verbGuard.isAllowed(command.getVerb())) {

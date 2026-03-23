@@ -11,6 +11,9 @@ management:
     health:
       show-details: never
 
+llm:
+  provider: ${LLM_PROVIDER:bedrock}
+
 aws:
   region: ${AWS_REGION:us-east-1}
   bedrock:
@@ -20,6 +23,11 @@ aws:
     table-name: ${DYNAMODB_TABLE:K8sAgentExecutions}
   cloudwatch:
     namespace: ${CLOUDWATCH_NAMESPACE:K8sAiOperator/Execution}
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-sonnet-4-20250514}
+  max-tokens: ${ANTHROPIC_MAX_TOKENS:512}
 
 k8s:
   allowed-verbs: get,apply
