@@ -60,7 +60,7 @@ aws:
 **Type:** string  
 **Default:** `K8sAgentExecutions`  
 **Environment variable:** `DYNAMODB_TABLE`  
-**Description:** The DynamoDB table used to store the audit log for every request (allowed and blocked). The table must exist before the application starts; it is not created automatically.
+**Description:** The DynamoDB table used to store the audit log for every request (allowed and blocked). When deploying via the provided AWS SAM/CloudFormation template, this table is created automatically as the `K8sAgentExecutionsTable` resource; when running the application outside SAM/CloudFormation, the table must already exist in your AWS account.
 
 **Example:**
 ```yaml

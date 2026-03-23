@@ -7,7 +7,7 @@ This service exposes a single REST endpoint. "Commands" are natural-language pro
 ### POST /k8s/execute
 
 **Description:** Accepts a natural-language prompt and executes the corresponding Kubernetes command if it is permitted by the verb allowlist.  
-**Permission:** Requires valid AWS IAM credentials with invoke access.  
+**Permission:** Public by default. If you configure an IAM authorizer (for example, via the SAM template `Auth` settings), the endpoint will then require valid AWS IAM credentials with invoke access.  
 **Usage:** `POST /k8s/execute`  
 **Content-Type:** `application/json`
 

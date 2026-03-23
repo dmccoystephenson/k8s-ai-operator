@@ -72,7 +72,9 @@ Response (`400 Bad Request`):
 
 | Permission | Default | Description |
 |------------|---------|-------------|
-| `k8s.execute` | Authenticated users | Allows sending commands via the API |
+| `k8s.execute` | Unauthenticated by default* | Allows sending commands via the API |
+
+\* The `/k8s/execute` endpoint is deployed without authentication by default. To restrict access, configure an API Gateway authorizer (e.g., IAM, Cognito, or a custom Lambda authorizer) in the SAM template or via the AWS Console.
 
 ## Allowed vs Blocked Commands
 

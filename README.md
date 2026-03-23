@@ -103,7 +103,7 @@ Key test cases:
 
 ---
 
-## Authors and Acknowledgement
+## Authors
 
 ### Developers
 
