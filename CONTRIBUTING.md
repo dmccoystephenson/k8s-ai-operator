@@ -59,4 +59,4 @@ If you see `BUILD SUCCESS`, the tests have passed.
 
 ## Questions
 
-Ask in the [Discord server](https://discord.gg/xXtuAQ2).
+Open a [GitHub issue](https://github.com/dmccoystephenson/k8s-ai-operator/issues) with your question.
