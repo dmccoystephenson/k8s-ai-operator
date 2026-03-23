@@ -1,6 +1,6 @@
 # Configuration Guide — k8s-ai-operator
 
-All configuration is defined in `src/main/resources/application.yml`. Environment variable overrides are supported for every AWS-specific option.
+All configuration is defined in `src/main/resources/application.yml`. Environment variable overrides are supported for every option.
 
 ## spring.application.name
 
@@ -13,6 +13,24 @@ All configuration is defined in `src/main/resources/application.yml`. Environmen
 **Type:** string (comma-separated list)  
 **Default:** `health`  
 **Description:** Which Spring Actuator endpoints are exposed over HTTP. Only the `health` endpoint is enabled by default.
+
+## llm.provider
+
+**Type:** string  
+**Default:** `bedrock`  
+**Environment variable:** `LLM_PROVIDER`  
+**Description:** Selects the LLM back-end used to translate natural-language prompts into structured Kubernetes commands. Supported values:
+
+| Value | Description |
+|---|---|
+| `bedrock` | AWS Bedrock (Claude via the AWS SDK). Requires AWS credentials and the `aws.bedrock.*` configuration. |
+| `anthropic` | Anthropic Messages API (direct HTTPS). Requires the `anthropic.*` configuration. |
+
+**Example:**
+```yaml
+llm:
+  provider: anthropic
+```
 
 ## aws.region
 
@@ -32,7 +50,7 @@ aws:
 **Type:** string  
 **Default:** `anthropic.claude-3-sonnet-20240229-v1:0`  
 **Environment variable:** `BEDROCK_MODEL_ID`  
-**Description:** The Amazon Bedrock model identifier used to translate natural-language prompts into structured Kubernetes commands. The model must have access enabled in the AWS Console (Bedrock → Model access).
+**Description:** The Amazon Bedrock model identifier used to translate natural-language prompts into structured Kubernetes commands. The model must have access enabled in the AWS Console (Bedrock → Model access). Only used when `llm.provider=bedrock`.
 
 **Example:**
 ```yaml
@@ -46,13 +64,52 @@ aws:
 **Type:** integer  
 **Default:** `512`  
 **Environment variable:** `BEDROCK_MAX_TOKENS`  
-**Description:** Maximum number of tokens the model may return per request. Limiting this caps cost and prevents the model from returning verbose multi-command responses.
+**Description:** Maximum number of tokens the model may return per request. Limiting this caps cost and prevents the model from returning verbose multi-command responses. Only used when `llm.provider=bedrock`.
 
 **Example:**
 ```yaml
 aws:
   bedrock:
     max-tokens: 512
+```
+
+## anthropic.api-key
+
+**Type:** string  
+**Default:** *(empty)*  
+**Environment variable:** `ANTHROPIC_API_KEY`  
+**Description:** The API key for authenticating with the Anthropic Messages API. Required when `llm.provider=anthropic`. Obtain a key from the [Anthropic Console](https://console.anthropic.com/).
+
+**Example:**
+```yaml
+anthropic:
+  api-key: sk-ant-...
+```
+
+## anthropic.model
+
+**Type:** string  
+**Default:** `claude-sonnet-4-20250514`  
+**Environment variable:** `ANTHROPIC_MODEL`  
+**Description:** The Anthropic model name to use for prompt parsing. Only used when `llm.provider=anthropic`.
+
+**Example:**
+```yaml
+anthropic:
+  model: claude-sonnet-4-20250514
+```
+
+## anthropic.max-tokens
+
+**Type:** integer  
+**Default:** `512`  
+**Environment variable:** `ANTHROPIC_MAX_TOKENS`  
+**Description:** Maximum number of tokens the model may return per request. Only used when `llm.provider=anthropic`.
+
+**Example:**
+```yaml
+anthropic:
+  max-tokens: 512
 ```
 
 ## aws.dynamodb.table-name
