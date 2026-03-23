@@ -1,22 +1,127 @@
 # k8s-ai-operator
 
-An AI-powered Kubernetes operator service that allows platform operators to inspect and apply Kubernetes manifests using natural language. Built with Spring Boot and AWS-native services.
+## Description
+
+k8s-ai-operator is an AI-powered Kubernetes operator service that allows platform operators to inspect and apply Kubernetes manifests using natural language. Built with Spring Boot and AWS-native services, it translates plain-English prompts into structured `kubectl`-style commands, enforces a strict verb allowlist, executes them against a Kubernetes client, and maintains a full audit trail in DynamoDB.
 
 ---
 
-## Overview
+## Installation
 
-Platform operators interact with Kubernetes through a natural language interface. The service translates user prompts into structured kubectl-style commands, enforces a strict verb allowlist, executes commands against a Kubernetes client, and maintains a full audit trail in DynamoDB.
+### Prerequisites
 
-**You can ask:**
-- "Show me the pods in namespace production"
-- "Apply this deployment YAML to the staging namespace"
+- Java 21
+- Maven 3.9+
+- AWS CLI configured with appropriate credentials
+- AWS SAM CLI (for local Lambda emulation)
 
-**You cannot:**
-- Delete resources
-- Scale deployments to zero
-- Exec into pods
-- Run arbitrary shell commands
+### First Time Installation
+
+1. Clone the repository: `git clone https://github.com/dmccoystephenson/k8s-ai-operator.git`
+2. Build the project: `./mvnw clean package`
+3. Deploy to AWS: `sam build && sam deploy --guided`
+
+For EC2 deployment, see [docs/ec2-setup.md](docs/ec2-setup.md).
+For EKS cluster setup, see [docs/eks-setup.md](docs/eks-setup.md).
+
+---
+
+## Usage
+
+### Documentation
+
+- [User Guide](USER_GUIDE.md) – Getting started and common scenarios
+- [Commands Reference](COMMANDS.md) – Complete list of all API commands
+- [Configuration Guide](CONFIG.md) – Detailed configuration options
+
+### Additional Resources
+
+- [EC2 Setup Guide](docs/ec2-setup.md)
+- [EKS Setup Guide](docs/eks-setup.md)
+- [Deploy Guide](docs/deploy.md)
+
+---
+
+## Support
+
+### Experiencing a bug?
+
+Please fill out a bug report [here](https://github.com/dmccoystephenson/k8s-ai-operator/issues/new).
+
+- [Known Bugs](https://github.com/dmccoystephenson/k8s-ai-operator/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
+
+---
+
+## Contributing
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+
+---
+
+## Testing
+
+### Unit Tests
+
+Linux:
+
+    ./mvnw clean test
+
+Windows:
+
+    mvnw.cmd clean test
+
+If you see `BUILD SUCCESS`, the tests have passed.
+
+Key test cases:
+
+- `VerbGuardTest` — verifies `delete`, `exec`, `scale`, `patch` are blocked unconditionally
+- `K8sExecuteControllerTest` — validates `400` response shape for forbidden intents
+- `BedrockCommandParserTest` — mocks Bedrock responses and asserts parsed command structure
+
+---
+
+## Development
+
+### Local API Emulation
+
+    sam local start-api
+
+### Deploy to AWS
+
+    sam build
+    sam deploy --guided
+
+### Deploy to EC2
+
+    chmod +x setup-ec2.sh
+    ./setup-ec2.sh
+
+### Provision a test Kubernetes cluster (EKS)
+
+    chmod +x setup-eks.sh
+    ./setup-eks.sh
+
+---
+
+## Authors
+
+### Developers
+
+| Name | Main Contributions |
+|------|---------------------|
+| dmccoystephenson | Initial implementation, AWS integration, core architecture |
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## Project Status
+
+This project is in active development.
 
 ---
 
@@ -203,49 +308,6 @@ All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
 
 ---
 
-## Getting Started
-
-> **New to this project? Start here → [docs/user-guide.md](docs/user-guide.md)**
-> A complete step-by-step guide from zero to a running deployment, no prior Kubernetes experience needed.
-
-**Prerequisites**
-
-- Java 21
-- Maven 3.9+
-- AWS CLI configured with appropriate credentials
-- AWS SAM CLI (for local Lambda emulation)
-
-**Build**
-
-    mvn clean package
-
-**Run locally**
-
-    sam local start-api
-
-**Deploy to AWS**
-
-    sam build
-    sam deploy --guided
-
-**Deploy to EC2**
-
-See [docs/ec2-setup.md](docs/ec2-setup.md) for a full walkthrough.
-A provisioning script is provided at the project root:
-
-    chmod +x setup-ec2.sh
-    ./setup-ec2.sh
-
-**Provision a test Kubernetes cluster (EKS)**
-
-See [docs/eks-setup.md](docs/eks-setup.md) for a full walkthrough.
-Requires `eksctl` and `kubectl` in addition to the AWS CLI:
-
-    chmod +x setup-eks.sh
-    ./setup-eks.sh
-
----
-
 ## IAM — Minimum Required Permissions
 
 The Lambda execution role requires:
@@ -262,18 +324,6 @@ No S3, no EC2, no wildcard actions.
 
 ---
 
-## Testing
-
-    mvn test
-
-Key test cases:
-
-- `VerbGuardTest` — verifies `delete`, `exec`, `scale`, `patch` are blocked unconditionally
-- `K8sExecuteControllerTest` — validates `400` response shape for forbidden intents
-- `BedrockCommandParserTest` — mocks Bedrock responses and asserts parsed command structure
-
----
-
 ## Security Notes
 
 - User prompts are **not** logged anywhere (CloudWatch or DynamoDB)
@@ -282,7 +332,3 @@ Key test cases:
 - Multi-command responses are rejected with a `400`
 
 ---
-
-## License
-
-MIT
