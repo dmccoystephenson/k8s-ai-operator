@@ -95,10 +95,24 @@ class AnthropicCommandParserTest {
 
     @Test
     void throwsOnNon200StatusCode() throws Exception {
-        stubHttpResponse(401, "{\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid api key\"}}");
+        when(httpResponse.statusCode()).thenReturn(401);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(httpResponse);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("anything"));
-        assertTrue(ex.getMessage().contains("401"));
+        assertTrue(ex.getMessage().contains("HTTP 401"));
+    }
+
+    @Test
+    void throwsOnBlankApiKey() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new AnthropicCommandParser(httpClient, new ObjectMapper(), "", "claude-sonnet-4-20250514", 512));
+    }
+
+    @Test
+    void throwsOnNullApiKey() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new AnthropicCommandParser(httpClient, new ObjectMapper(), null, "claude-sonnet-4-20250514", 512));
     }
 
     @Test

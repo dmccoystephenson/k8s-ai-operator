@@ -2,7 +2,6 @@ package com.stephenson.k8saioperator.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stephenson.k8saioperator.model.ParsedCommand;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +14,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -33,6 +33,8 @@ public class AnthropicCommandParser implements CommandParser {
 
     private static final String ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
     private static final String ANTHROPIC_VERSION = "2023-06-01";
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 
     private static final String SYSTEM_PROMPT =
             "You are a Kubernetes operations assistant. Translate the user's natural language " +
@@ -54,7 +56,8 @@ public class AnthropicCommandParser implements CommandParser {
             @Value("${anthropic.api-key}") String apiKey,
             @Value("${anthropic.model}") String model,
             @Value("${anthropic.max-tokens}") int maxTokens) {
-        this(HttpClient.newHttpClient(), objectMapper, apiKey, model, maxTokens);
+        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(),
+                objectMapper, apiKey, model, maxTokens);
     }
 
     public AnthropicCommandParser(
@@ -63,6 +66,10 @@ public class AnthropicCommandParser implements CommandParser {
             String apiKey,
             String model,
             int maxTokens) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalArgumentException(
+                    "anthropic.api-key must be set when llm.provider=anthropic");
+        }
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
         this.apiKey = apiKey;
@@ -81,6 +88,7 @@ public class AnthropicCommandParser implements CommandParser {
                 .header("content-type", "application/json")
                 .header("x-api-key", apiKey)
                 .header("anthropic-version", ANTHROPIC_VERSION)
+                .timeout(REQUEST_TIMEOUT)
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
@@ -89,7 +97,7 @@ public class AnthropicCommandParser implements CommandParser {
 
             if (response.statusCode() != 200) {
                 throw new IllegalStateException(
-                        "Anthropic API returned status " + response.statusCode() + ": " + response.body());
+                        "Anthropic API returned HTTP " + response.statusCode());
             }
 
             return parseResponse(response.body());
@@ -108,12 +116,10 @@ public class AnthropicCommandParser implements CommandParser {
             root.put("max_tokens", maxTokens);
             root.put("system", SYSTEM_PROMPT);
 
-            ArrayNode messages = objectMapper.createArrayNode();
             ObjectNode message = objectMapper.createObjectNode();
             message.put("role", "user");
             message.put("content", userPrompt);
-            messages.add(message);
-            root.set("messages", messages);
+            root.putArray("messages").add(message);
 
             return objectMapper.writeValueAsString(root);
         } catch (Exception e) {
