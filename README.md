@@ -305,58 +305,6 @@ All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
 
 ---
 
-## Project Structure
-
-    k8s-ai-operator/
-    ├── src/
-    │   └── main/
-    │       ├── java/com/stephenson/k8saioperator/
-    │       │   ├── K8sAiOperatorApplication.java
-    │       │   ├── config/
-    │       │   │   ├── AwsConfig.java
-    │       │   │   └── LocalDatabaseConfig.java
-    │       │   ├── controller/
-    │       │   │   └── K8sExecuteController.java
-    │       │   ├── metrics/
-    │       │   │   ├── MetricsEmitter.java          (interface)
-    │       │   │   ├── CloudWatchMetricsEmitter.java (aws profile)
-    │       │   │   └── NoOpMetricsEmitter.java       (local profile)
-    │       │   ├── model/
-    │       │   │   ├── AuditRecord.java
-    │       │   │   ├── ExecuteRequest.java
-    │       │   │   ├── ParsedCommand.java
-    │       │   │   └── ExecuteResponse.java
-    │       │   ├── repository/
-    │       │   │   └── AuditRecordRepository.java
-    │       │   └── service/
-    │       │       ├── AuditService.java             (interface)
-    │       │       ├── DynamoDbAuditService.java     (aws profile)
-    │       │       ├── PostgresAuditService.java     (local profile)
-    │       │       ├── CommandParser.java            (interface)
-    │       │       ├── BedrockCommandParser.java     (bedrock provider)
-    │       │       ├── AnthropicCommandParser.java   (anthropic provider)
-    │       │       ├── VerbGuard.java
-    │       │       └── K8sClientAdapter.java
-    │       └── resources/
-    │           ├── application.yml
-    │           └── application-local.yml
-    ├── src/test/
-    │   └── java/com/stephenson/k8saioperator/
-    │       ├── K8sAiOperatorApplicationTests.java
-    │       ├── AnthropicCommandParserTest.java
-    │       ├── BedrockCommandParserTest.java
-    │       ├── K8sExecuteControllerTest.java
-    │       ├── PostgresAuditServiceTest.java
-    │       └── VerbGuardTest.java
-    ├── docker-compose.yml         # Local Postgres container
-    ├── setup-minikube.sh          # Local Minikube setup
-    ├── setup-eks.sh               # EKS cluster setup
-    ├── template.yaml              # AWS SAM deployment template
-    ├── pom.xml
-    └── README.md
-
----
-
 ## Configuration — `application.yml`
 
     aws:
