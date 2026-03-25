@@ -44,7 +44,9 @@ public class DynamoDbAuditService implements AuditService {
     public void recordBlocked(String requestId, ParsedCommand command, String blockReason, long latencyMs) {
         Map<String, AttributeValue> item = baseItem(requestId, command, latencyMs);
         item.put("allowed", AttributeValue.builder().bool(false).build());
-        item.put("block_reason", AttributeValue.builder().s(blockReason).build());
+        if (blockReason != null && !blockReason.isBlank()) {
+            item.put("block_reason", AttributeValue.builder().s(blockReason).build());
+        }
         persist(requestId, item);
     }
 
@@ -77,7 +79,7 @@ public class DynamoDbAuditService implements AuditService {
                     .build());
             log.debug("Audit record written for request_id={}", requestId);
         } catch (Exception e) {
-            log.error("Failed to write audit record for request_id={}: {}", requestId, e.getMessage());
+            log.error("Failed to write audit record for request_id={}", requestId, e);
         }
     }
 }

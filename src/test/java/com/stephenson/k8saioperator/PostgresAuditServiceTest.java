@@ -11,6 +11,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -50,6 +52,7 @@ class PostgresAuditServiceTest {
         assertEquals(42L, saved.getExecutionLatencyMs());
         assertNull(saved.getBlockReason());
         assertNotNull(saved.getTimestamp());
+        assertInstanceOf(Instant.class, saved.getTimestamp());
     }
 
     @Test

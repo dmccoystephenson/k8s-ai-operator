@@ -41,7 +41,7 @@ public class PostgresAuditService implements AuditService {
     private AuditRecord buildRecord(String requestId, ParsedCommand command, long latencyMs) {
         AuditRecord.AuditRecordBuilder builder = AuditRecord.builder()
                 .requestId(requestId)
-                .timestamp(Instant.now().toString())
+                .timestamp(Instant.now())
                 .executionLatencyMs(latencyMs);
 
         if (command != null) {
@@ -58,7 +58,7 @@ public class PostgresAuditService implements AuditService {
             repository.save(record);
             log.debug("Audit record written for request_id={}", requestId);
         } catch (Exception e) {
-            log.error("Failed to write audit record for request_id={}: {}", requestId, e.getMessage());
+            log.error("Failed to write audit record for request_id={}", requestId, e);
         }
     }
 }

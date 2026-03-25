@@ -122,7 +122,8 @@ This starts Minikube, verifies the `kubectl` context, creates test namespaces, a
 The `local` profile activates:
 - **PostgresAuditService** — writes audit records to the local Postgres database instead of DynamoDB
 - **Anthropic LLM** — uses the Anthropic API directly instead of AWS Bedrock
-- **Generic kubeconfig** — `K8sClientAdapter` reads from the default kubeconfig context (Minikube, EKS, or any other cluster)
+- **NoOpMetricsEmitter** — logs metrics at DEBUG level instead of sending them to CloudWatch
+- **K8sClientAdapter** — uses the default kubeconfig context (point it at Minikube by running `setup-minikube.sh` first)
 
 No AWS credentials are required when running with `-Dspring.profiles.active=local`.
 

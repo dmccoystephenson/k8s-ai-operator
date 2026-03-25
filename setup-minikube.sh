@@ -2,8 +2,6 @@
 # setup-minikube.sh — Start a local Minikube cluster for k8s-ai-operator development
 set -euo pipefail
 
-NAMESPACE="production"
-
 # ── Verify required tools ─────────────────────────────────────────────────────
 for tool in minikube kubectl; do
   if ! command -v "$tool" &>/dev/null; then

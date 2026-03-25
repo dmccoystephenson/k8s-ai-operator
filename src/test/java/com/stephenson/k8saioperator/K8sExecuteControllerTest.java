@@ -2,7 +2,7 @@ package com.stephenson.k8saioperator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stephenson.k8saioperator.controller.K8sExecuteController;
-import com.stephenson.k8saioperator.metrics.CloudWatchMetricsEmitter;
+import com.stephenson.k8saioperator.metrics.MetricsEmitter;
 import com.stephenson.k8saioperator.model.ParsedCommand;
 import com.stephenson.k8saioperator.service.AuditService;
 import com.stephenson.k8saioperator.service.CommandParser;
@@ -48,7 +48,7 @@ class K8sExecuteControllerTest {
     private AuditService auditService;
 
     @MockBean
-    private CloudWatchMetricsEmitter metricsEmitter;
+    private MetricsEmitter metricsEmitter;
 
     @Test
     void forbiddenVerb_returns400WithAllowedFalse() throws Exception {

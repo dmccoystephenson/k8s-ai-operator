@@ -6,8 +6,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+import java.time.Instant;
 
 /**
  * JPA entity that mirrors the {@code K8sAgentExecutions} DynamoDB schema.
@@ -17,7 +22,10 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Table(name = "audit_records")
-@Data
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "requestId")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,7 +36,7 @@ public class AuditRecord {
     private String requestId;
 
     @Column(name = "timestamp", nullable = false)
-    private String timestamp;
+    private Instant timestamp;
 
     @Column(name = "execution_latency_ms")
     private Long executionLatencyMs;
