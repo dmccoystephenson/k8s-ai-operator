@@ -94,7 +94,13 @@ A fully local workflow is available using Docker (Postgres) and Minikube in plac
 - Minikube (for a local Kubernetes cluster)
 - An Anthropic API key (`ANTHROPIC_API_KEY`)
 
-#### 1. Start the local Postgres container
+#### 1. Create the local configuration file
+
+    cp src/main/resources/application-local.yml.example src/main/resources/application-local.yml
+
+Edit the file if you need to override any default datasource settings (URL, username, password). The defaults work with the Postgres container started in step 2.
+
+#### 2. Start the local Postgres container
 
 Using Docker Compose:
 
@@ -108,7 +114,7 @@ Or with a single `docker run`:
       -e POSTGRES_PASSWORD=operator \
       -p 5432:5432 postgres:16
 
-#### 2. Start Minikube (optional)
+#### 3. Start Minikube (optional)
 
     chmod +x setup-minikube.sh
     ./setup-minikube.sh
@@ -117,7 +123,7 @@ This starts Minikube, verifies the `kubectl` context, creates test namespaces, a
 
 > **Note:** The current `K8sClientAdapter` returns simulated kubectl output and does not connect to a live cluster. Minikube is not required to run the application end-to-end; this step is provided for future cluster integration work.
 
-#### 3. Run the application with the `local` profile
+#### 4. Run the application with the `local` profile
 
     ANTHROPIC_API_KEY=<your-key> ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 

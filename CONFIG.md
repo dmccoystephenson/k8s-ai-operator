@@ -169,7 +169,14 @@ k8s:
 ## Local Profile (`application-local.yml`)
 
 The following properties are only relevant when running with `spring.profiles.active=local`.
-They replace the AWS-backed dependencies (DynamoDB, Bedrock, CloudWatch) with local alternatives:
+They replace the AWS-backed dependencies (DynamoDB, Bedrock, CloudWatch) with local alternatives.
+
+`application-local.yml` is excluded from version control (see `.gitignore`) to prevent accidentally
+committing real credentials. Copy the provided example to get started:
+
+```bash
+cp src/main/resources/application-local.yml.example src/main/resources/application-local.yml
+```
 
 | AWS service | Local replacement |
 |---|---|
