@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stephenson.k8saioperator.model.ParsedCommand;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
@@ -26,7 +27,8 @@ import java.util.List;
  */
 @Slf4j
 @Service
-public class BedrockCommandParser {
+@ConditionalOnProperty(name = "llm.provider", havingValue = "bedrock", matchIfMissing = true)
+public class BedrockCommandParser implements CommandParser {
 
     private static final String SYSTEM_PROMPT =
             "You are a Kubernetes operations assistant. Translate the user's natural language " +
