@@ -34,7 +34,7 @@ public class PostgresAuditService implements AuditService {
     public void recordBlocked(String requestId, ParsedCommand command, String blockReason, long latencyMs) {
         AuditRecord record = buildRecord(requestId, command, latencyMs);
         record.setAllowed(false);
-        record.setBlockReason(blockReason);
+        record.setBlockReason(blockReason != null && !blockReason.isBlank() ? blockReason : null);
         persist(requestId, record);
     }
 
