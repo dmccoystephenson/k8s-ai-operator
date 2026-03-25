@@ -108,12 +108,14 @@ Or with a single `docker run`:
       -e POSTGRES_PASSWORD=operator \
       -p 5432:5432 postgres:16
 
-#### 2. Start Minikube
+#### 2. Start Minikube (optional)
 
     chmod +x setup-minikube.sh
     ./setup-minikube.sh
 
 This starts Minikube, verifies the `kubectl` context, creates test namespaces, and deploys sample workloads.
+
+> **Note:** The current `K8sClientAdapter` returns simulated kubectl output and does not connect to a live cluster. Minikube is not required to run the application end-to-end; this step is provided for future cluster integration work.
 
 #### 3. Run the application with the `local` profile
 
@@ -123,7 +125,7 @@ The `local` profile activates:
 - **PostgresAuditService** — writes audit records to the local Postgres database instead of DynamoDB
 - **Anthropic LLM** — uses the Anthropic API directly instead of AWS Bedrock
 - **NoOpMetricsEmitter** — logs metrics at DEBUG level instead of sending them to CloudWatch
-- **K8sClientAdapter** — uses the default kubeconfig context (point it at Minikube by running `setup-minikube.sh` first)
+- **K8sClientAdapter** — returns simulated kubectl output (mock client); no live cluster is required to exercise the API
 
 No AWS credentials are required when running with `-Dspring.profiles.active=local`.
 
@@ -244,7 +246,7 @@ This project is in active development.
 
 ## Command Model
 
-Bedrock translates the user prompt into the following intermediate structure:
+The configured LLM provider translates the user prompt into the following intermediate structure:
 
     {
       "verb": "get | apply",
@@ -310,28 +312,46 @@ All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
     │   └── main/
     │       ├── java/com/stephenson/k8saioperator/
     │       │   ├── K8sAiOperatorApplication.java
+    │       │   ├── config/
+    │       │   │   ├── AwsConfig.java
+    │       │   │   └── LocalDatabaseConfig.java
     │       │   ├── controller/
     │       │   │   └── K8sExecuteController.java
-    │       │   ├── service/
-    │       │   │   ├── BedrockCommandParser.java
-    │       │   │   ├── VerbGuard.java
-    │       │   │   ├── K8sClientAdapter.java
-    │       │   │   └── AuditService.java
     │       │   ├── metrics/
-    │       │   │   └── CloudWatchMetricsEmitter.java
-    │       │   └── model/
-    │       │       ├── ExecuteRequest.java
-    │       │       ├── ParsedCommand.java
-    │       │       └── ExecuteResponse.java
+    │       │   │   ├── MetricsEmitter.java          (interface)
+    │       │   │   ├── CloudWatchMetricsEmitter.java (aws profile)
+    │       │   │   └── NoOpMetricsEmitter.java       (local profile)
+    │       │   ├── model/
+    │       │   │   ├── AuditRecord.java
+    │       │   │   ├── ExecuteRequest.java
+    │       │   │   ├── ParsedCommand.java
+    │       │   │   └── ExecuteResponse.java
+    │       │   ├── repository/
+    │       │   │   └── AuditRecordRepository.java
+    │       │   └── service/
+    │       │       ├── AuditService.java             (interface)
+    │       │       ├── DynamoDbAuditService.java     (aws profile)
+    │       │       ├── PostgresAuditService.java     (local profile)
+    │       │       ├── CommandParser.java            (interface)
+    │       │       ├── BedrockCommandParser.java     (bedrock provider)
+    │       │       ├── AnthropicCommandParser.java   (anthropic provider)
+    │       │       ├── VerbGuard.java
+    │       │       └── K8sClientAdapter.java
     │       └── resources/
-    │           └── application.yml
+    │           ├── application.yml
+    │           └── application-local.yml
     ├── src/test/
     │   └── java/com/stephenson/k8saioperator/
     │       ├── K8sAiOperatorApplicationTests.java
+    │       ├── AnthropicCommandParserTest.java
     │       ├── BedrockCommandParserTest.java
-    │       ├── VerbGuardTest.java
-    │       └── K8sExecuteControllerTest.java
-    ├── template.yaml          # AWS SAM deployment template
+    │       ├── K8sExecuteControllerTest.java
+    │       ├── PostgresAuditServiceTest.java
+    │       └── VerbGuardTest.java
+    ├── docker-compose.yml         # Local Postgres container
+    ├── setup-minikube.sh          # Local Minikube setup
+    ├── setup-eks.sh               # EKS cluster setup
+    ├── template.yaml              # AWS SAM deployment template
     ├── pom.xml
     └── README.md
 

@@ -35,7 +35,7 @@ Thank you for your interest in contributing to k8s-ai-operator! This guide will 
 ### Local development workflow (no AWS required)
 
 1. Start the local Postgres container: `docker compose up -d`
-2. Start Minikube: `./setup-minikube.sh`
+2. *(Optional)* Start Minikube: `./setup-minikube.sh` — not required since `K8sClientAdapter` returns mock responses
 3. Run the application with the `local` profile:
    `ANTHROPIC_API_KEY=<your-key> ./mvnw spring-boot:run -Dspring-boot.run.profiles=local`
 

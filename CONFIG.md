@@ -169,7 +169,13 @@ k8s:
 ## Local Profile (`application-local.yml`)
 
 The following properties are only relevant when running with `spring.profiles.active=local`.
-They replace the AWS-backed dependencies (DynamoDB, Bedrock) with local alternatives.
+They replace the AWS-backed dependencies (DynamoDB, Bedrock, CloudWatch) with local alternatives:
+
+| AWS service | Local replacement |
+|---|---|
+| Amazon DynamoDB (audit log) | PostgreSQL via `PostgresAuditService` |
+| AWS Bedrock (LLM) | Anthropic API (`llm.provider=anthropic`) |
+| Amazon CloudWatch (metrics) | `NoOpMetricsEmitter` — logs at DEBUG level, no AWS calls |
 
 ### spring.datasource.url
 
