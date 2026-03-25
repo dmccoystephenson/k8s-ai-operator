@@ -163,3 +163,45 @@ k8s:
 k8s:
   disallowed-verbs: delete,exec,scale,patch
 ```
+
+---
+
+## Local Profile (`application-local.yml`)
+
+The following properties are only relevant when running with `spring.profiles.active=local`.
+They replace the AWS-backed dependencies (DynamoDB, Bedrock) with local alternatives.
+
+### spring.datasource.url
+
+**Type:** string  
+**Default:** `jdbc:postgresql://localhost:5432/k8s_audit`  
+**Description:** JDBC URL for the local PostgreSQL database used for audit logging.
+
+### spring.datasource.username
+
+**Type:** string  
+**Default:** `operator`  
+**Description:** PostgreSQL user for the local audit database.
+
+### spring.datasource.password
+
+**Type:** string  
+**Default:** `operator`  
+**Description:** PostgreSQL password for the local audit database.
+
+### spring.jpa.hibernate.ddl-auto
+
+**Type:** string  
+**Default:** `update`  
+**Description:** Hibernate schema management strategy. `update` creates or updates the `audit_records` table automatically on startup.
+
+### llm.provider (local profile override)
+
+**Default:** `anthropic`  
+**Description:** In the `local` profile this defaults to `anthropic` so no AWS credentials are required. Set `ANTHROPIC_API_KEY` before starting the application.
+
+**Example — starting the app locally:**
+```bash
+ANTHROPIC_API_KEY=sk-ant-... ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+

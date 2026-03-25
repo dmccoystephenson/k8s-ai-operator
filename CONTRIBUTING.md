@@ -17,6 +17,12 @@ Thank you for your interest in contributing to k8s-ai-operator! This guide will 
 - Maven 3.9+
 - A basic understanding of Java and Spring Boot
 
+### Optional (for fully local end-to-end testing, no AWS required)
+
+- Docker (to run a local Postgres audit database)
+- Minikube (to run a local Kubernetes cluster)
+- An Anthropic API key (`ANTHROPIC_API_KEY`)
+
 ## Getting Started
 
 1. [Sign up for GitHub](https://github.com/signup) if you don't have an account.
@@ -25,6 +31,15 @@ Thank you for your interest in contributing to k8s-ai-operator! This guide will 
 4. Open the project in your IDE.
 5. Build the project: `./mvnw clean package`
    If you encounter errors, please open an issue.
+
+### Local development workflow (no AWS required)
+
+1. Start the local Postgres container: `docker compose up -d`
+2. Start Minikube: `./setup-minikube.sh`
+3. Run the application with the `local` profile:
+   `ANTHROPIC_API_KEY=<your-key> ./mvnw spring-boot:run -Dspring-boot.run.profiles=local`
+
+See the [Local Development](README.md#local-development-no-aws-required) section in the README for full details.
 
 ## Identifying What to Work On
 

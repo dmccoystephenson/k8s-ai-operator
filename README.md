@@ -82,7 +82,53 @@ Key test cases:
 
 ## Development
 
-### Local API Emulation
+### Local Development (no AWS required)
+
+A fully local workflow is available using Docker (Postgres) and Minikube in place of DynamoDB and EKS.
+
+#### Prerequisites
+
+- Java 21
+- Maven 3.9+
+- Docker (for the local Postgres container)
+- Minikube (for a local Kubernetes cluster)
+- An Anthropic API key (`ANTHROPIC_API_KEY`)
+
+#### 1. Start the local Postgres container
+
+Using Docker Compose:
+
+    docker compose up -d
+
+Or with a single `docker run`:
+
+    docker run -d --name k8s-ai-operator-db \
+      -e POSTGRES_DB=k8s_audit \
+      -e POSTGRES_USER=operator \
+      -e POSTGRES_PASSWORD=operator \
+      -p 5432:5432 postgres:16
+
+#### 2. Start Minikube
+
+    chmod +x setup-minikube.sh
+    ./setup-minikube.sh
+
+This starts Minikube, verifies the `kubectl` context, creates test namespaces, and deploys sample workloads.
+
+#### 3. Run the application with the `local` profile
+
+    ANTHROPIC_API_KEY=<your-key> ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+
+The `local` profile activates:
+- **PostgresAuditService** — writes audit records to the local Postgres database instead of DynamoDB
+- **Anthropic LLM** — uses the Anthropic API directly instead of AWS Bedrock
+- **Generic kubeconfig** — `K8sClientAdapter` reads from the default kubeconfig context (Minikube, EKS, or any other cluster)
+
+No AWS credentials are required when running with `-Dspring.profiles.active=local`.
+
+### AWS Deployment
+
+#### Local API Emulation
 
     sam local start-api
 
