@@ -82,7 +82,62 @@ Key test cases:
 
 ## Development
 
-### Local API Emulation
+### Local Development (no AWS required)
+
+A fully local workflow is available using Docker (Postgres) and Minikube in place of DynamoDB and EKS.
+
+#### Prerequisites
+
+- Java 21
+- Maven 3.9+
+- Docker (for the local Postgres container)
+- Minikube (for a local Kubernetes cluster)
+- An Anthropic API key (`ANTHROPIC_API_KEY`)
+
+#### 1. Create the local configuration file
+
+    cp src/main/resources/application-local.yml.example src/main/resources/application-local.yml
+
+Edit the file if you need to override any default datasource settings (URL, username, password). The defaults work with the Postgres container started in step 2.
+
+#### 2. Start the local Postgres container
+
+Using Docker Compose:
+
+    docker compose up -d
+
+Or with a single `docker run`:
+
+    docker run -d --name k8s-ai-operator-db \
+      -e POSTGRES_DB=k8s_audit \
+      -e POSTGRES_USER=operator \
+      -e POSTGRES_PASSWORD=operator \
+      -p 5432:5432 postgres:16
+
+#### 3. Start Minikube (optional)
+
+    chmod +x setup-minikube.sh
+    ./setup-minikube.sh
+
+This starts Minikube, verifies the `kubectl` context, creates test namespaces, and deploys sample workloads.
+
+> **Note:** The current `K8sClientAdapter` returns simulated kubectl output and does not connect to a live cluster. Minikube is not required to run the application end-to-end; this step is provided for future cluster integration work.
+
+#### 4. Run the application with the `local` profile
+
+    ANTHROPIC_API_KEY=<your-key> ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+
+The `local` profile activates:
+- **PostgresAuditService** — writes audit records to the local Postgres database instead of DynamoDB
+- **Anthropic LLM** — uses the Anthropic API directly instead of AWS Bedrock
+- **NoOpMetricsEmitter** — logs metrics at DEBUG level instead of sending them to CloudWatch
+- **K8sClientAdapter** — returns simulated kubectl output (mock client); no live cluster is required to exercise the API
+
+No AWS credentials are required when running with `-Dspring.profiles.active=local`.
+
+### AWS Deployment
+
+#### Local API Emulation
 
     sam local start-api
 
@@ -197,7 +252,7 @@ This project is in active development.
 
 ## Command Model
 
-Bedrock translates the user prompt into the following intermediate structure:
+The configured LLM provider translates the user prompt into the following intermediate structure:
 
     {
       "verb": "get | apply",
@@ -253,40 +308,6 @@ Raw user prompts are **never** stored.
 | `ExecutionLatencyMs` | Milliseconds | End-to-end latency per request |
 
 All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
-
----
-
-## Project Structure
-
-    k8s-ai-operator/
-    ├── src/
-    │   └── main/
-    │       ├── java/com/stephenson/k8saioperator/
-    │       │   ├── K8sAiOperatorApplication.java
-    │       │   ├── controller/
-    │       │   │   └── K8sExecuteController.java
-    │       │   ├── service/
-    │       │   │   ├── BedrockCommandParser.java
-    │       │   │   ├── VerbGuard.java
-    │       │   │   ├── K8sClientAdapter.java
-    │       │   │   └── AuditService.java
-    │       │   ├── metrics/
-    │       │   │   └── CloudWatchMetricsEmitter.java
-    │       │   └── model/
-    │       │       ├── ExecuteRequest.java
-    │       │       ├── ParsedCommand.java
-    │       │       └── ExecuteResponse.java
-    │       └── resources/
-    │           └── application.yml
-    ├── src/test/
-    │   └── java/com/stephenson/k8saioperator/
-    │       ├── K8sAiOperatorApplicationTests.java
-    │       ├── BedrockCommandParserTest.java
-    │       ├── VerbGuardTest.java
-    │       └── K8sExecuteControllerTest.java
-    ├── template.yaml          # AWS SAM deployment template
-    ├── pom.xml
-    └── README.md
 
 ---
 

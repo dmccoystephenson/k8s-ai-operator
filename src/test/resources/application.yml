@@ -2,6 +2,7 @@ spring:
   application:
     name: k8s-ai-operator-test
 
+
 llm:
   provider: bedrock
 

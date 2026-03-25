@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/k8s_audit}
+    username: ${SPRING_DATASOURCE_USERNAME:operator}
+    password: ${SPRING_DATASOURCE_PASSWORD:operator}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+
+llm:
+  provider: anthropic

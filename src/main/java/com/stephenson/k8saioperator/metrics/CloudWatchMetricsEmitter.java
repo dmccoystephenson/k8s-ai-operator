@@ -2,6 +2,7 @@ package com.stephenson.k8saioperator.metrics;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
@@ -19,7 +20,8 @@ import software.amazon.awssdk.services.cloudwatch.model.StandardUnit;
  */
 @Slf4j
 @Component
-public class CloudWatchMetricsEmitter {
+@Profile("!local")
+public class CloudWatchMetricsEmitter implements MetricsEmitter {
 
     private final CloudWatchClient cloudWatchClient;
     private final String namespace;
@@ -31,14 +33,17 @@ public class CloudWatchMetricsEmitter {
         this.namespace = namespace;
     }
 
+    @Override
     public void emitAllowedCommand() {
         emit("AllowedCommands", 1.0, StandardUnit.COUNT);
     }
 
+    @Override
     public void emitBlockedCommand() {
         emit("BlockedCommands", 1.0, StandardUnit.COUNT);
     }
 
+    @Override
     public void emitLatency(long latencyMs) {
         emit("ExecutionLatencyMs", (double) latencyMs, StandardUnit.MILLISECONDS);
     }
