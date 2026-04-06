@@ -18,7 +18,7 @@ variable "lambda_function_name" {
   type        = string
 }
 
-variable "lambda_invoke_arn" {
-  description = "Invoke ARN of the Lambda function"
+variable "lambda_function_arn" {
+  description = "ARN of the Lambda function (used to construct the API Gateway integration URI)"
   type        = string
 }

@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
   # Remote state backend — configure for your environment.
@@ -190,20 +194,25 @@ module "api_gateway" {
   aws_region           = var.aws_region
   account_id           = data.aws_caller_identity.current.account_id
   lambda_function_name = module.lambda.function_name
-  lambda_invoke_arn    = module.lambda.invoke_arn
+  lambda_function_arn  = module.lambda.function_arn
 }
 
 module "eks" {
   source = "./modules/eks"
 
-  environment            = var.environment
-  cluster_name           = "${var.eks_cluster_name}-${var.environment}"
-  kubernetes_version     = var.eks_kubernetes_version
-  node_instance_type     = var.eks_node_instance_type
-  node_desired_count     = var.eks_node_desired_count
-  node_min_count         = var.eks_node_min_count
-  node_max_count         = var.eks_node_max_count
-  private_subnet_ids     = aws_subnet.private[*].id
-  public_subnet_ids      = aws_subnet.public[*].id
-  vpc_id                 = aws_vpc.main.id
+  environment                    = var.environment
+  cluster_name                   = "${var.eks_cluster_name}-${var.environment}"
+  kubernetes_version             = var.eks_kubernetes_version
+  node_instance_type             = var.eks_node_instance_type
+  node_desired_count             = var.eks_node_desired_count
+  node_min_count                 = var.eks_node_min_count
+  node_max_count                 = var.eks_node_max_count
+  private_subnet_ids             = aws_subnet.private[*].id
+  public_subnet_ids              = aws_subnet.public[*].id
+  vpc_id                         = aws_vpc.main.id
+  account_id                     = data.aws_caller_identity.current.account_id
+  aws_region                     = var.aws_region
+  dynamodb_table_arn             = module.dynamodb.table_arn
+  cloudwatch_namespace           = var.cloudwatch_namespace
+  bedrock_model_id               = var.bedrock_model_id
 }

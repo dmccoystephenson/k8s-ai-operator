@@ -186,15 +186,34 @@ kubeconfig after `terraform apply`).
     # Update kubeconfig for the EKS cluster created by Terraform
     aws eks update-kubeconfig --name k8s-ai-operator-dev --region us-east-2
 
+The operator pod needs AWS credentials to call Bedrock, write audit records to
+DynamoDB, and emit CloudWatch metrics. The recommended approach is **IAM Roles
+for Service Accounts (IRSA)**. `terraform apply` creates a dedicated IRSA role
+and prints its ARN as the `eks_irsa_role_arn` output. Pass that ARN as a
+ServiceAccount annotation at install time:
+
+    # Read the IRSA role ARN from Terraform
+    IRSA_ROLE_ARN=$(terraform -chdir=infra/terraform output -raw eks_irsa_role_arn)
+
+The most reliable way to supply the annotation is via an override `values.yaml`
+(avoids shell-escaping issues with dots in Helm `--set` keys):
+
+    # irsa-values.yaml
+    serviceAccount:
+      annotations:
+        eks.amazonaws.com/role-arn: "<IRSA_ROLE_ARN>"
+
     # First-time install
     helm install k8s-ai-operator ./charts/k8s-ai-operator \
       --namespace k8s-ai-operator --create-namespace \
+      -f irsa-values.yaml \
       --set image.repository=<ACCOUNT_ID>.dkr.ecr.us-east-2.amazonaws.com/k8s-ai-operator \
       --set image.tag=latest
 
     # Upgrade (e.g. after pushing a new image)
     helm upgrade k8s-ai-operator ./charts/k8s-ai-operator \
       --namespace k8s-ai-operator \
+      -f irsa-values.yaml \
       --set image.tag=<new-tag>
 
 Key configurable values (override with `--set` or a custom `values.yaml`):
@@ -208,6 +227,7 @@ Key configurable values (override with `--set` or a custom `values.yaml`):
 | `aws.bedrock.modelId` | `anthropic.claude-3-sonnet-20240229-v1:0` | Bedrock model |
 | `aws.dynamodb.tableName` | `K8sAgentExecutions` | Audit table name |
 | `aws.cloudwatch.namespace` | `K8sAiOperator/Execution` | Metrics namespace |
+| `serviceAccount.annotations` | `{}` | Annotations on the ServiceAccount — set `eks.amazonaws.com/role-arn` to the IRSA role ARN from Terraform |
 
 #### Local API Emulation
 

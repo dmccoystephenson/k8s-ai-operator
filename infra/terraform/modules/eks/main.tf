@@ -113,3 +113,88 @@ resource "aws_eks_node_group" "standard" {
     Name = "${var.cluster_name}-node"
   }
 }
+
+# ── OIDC provider (required for IRSA) ─────────────────────────────────────────
+
+data "tls_certificate" "oidc" {
+  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "oidc" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.oidc.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+# ── IRSA role for the operator pod ────────────────────────────────────────────
+# Pods annotated with this role ARN can call Bedrock, DynamoDB, and CloudWatch
+# without any node-level credentials (recommended over node role permissions).
+
+locals {
+  oidc_provider_id = replace(aws_iam_openid_connect_provider.oidc.url, "https://", "")
+}
+
+resource "aws_iam_role" "irsa_operator" {
+  name = "${var.cluster_name}-irsa-operator"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.oidc.arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.oidc_provider_id}:sub" = "system:serviceaccount:${var.operator_namespace}:${var.operator_service_account_name}"
+          "${local.oidc_provider_id}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_policy" "irsa_operator_policy" {
+  name        = "${var.cluster_name}-irsa-operator-policy"
+  description = "Least-privilege policy for k8s-ai-operator pods (IRSA)"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "BedrockInvokeModel"
+        Effect = "Allow"
+        Action = ["bedrock:InvokeModel"]
+        Resource = [
+          "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_model_id}"
+        ]
+      },
+      {
+        Sid    = "DynamoDbAudit"
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem"
+        ]
+        Resource = [var.dynamodb_table_arn]
+      },
+      {
+        Sid      = "CloudWatchMetrics"
+        Effect   = "Allow"
+        Action   = ["cloudwatch:PutMetricData"]
+        Resource = ["*"]
+        Condition = {
+          StringEquals = {
+            "cloudwatch:namespace" = var.cloudwatch_namespace
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "irsa_operator" {
+  role       = aws_iam_role.irsa_operator.name
+  policy_arn = aws_iam_policy.irsa_operator_policy.arn
+}

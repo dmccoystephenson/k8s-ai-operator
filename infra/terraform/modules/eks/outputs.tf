@@ -17,3 +17,8 @@ output "node_group_role_arn" {
   description = "ARN of the IAM role attached to the EKS node group"
   value       = aws_iam_role.node_group.arn
 }
+
+output "irsa_role_arn" {
+  description = "ARN of the IRSA role to annotate the operator ServiceAccount with"
+  value       = aws_iam_role.irsa_operator.arn
+}

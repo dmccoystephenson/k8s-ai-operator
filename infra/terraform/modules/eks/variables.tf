@@ -47,3 +47,40 @@ variable "vpc_id" {
   description = "VPC ID where the cluster resides"
   type        = string
 }
+
+variable "account_id" {
+  description = "AWS account ID (used for IRSA trust policy)"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "AWS region (used for IRSA policy resources)"
+  type        = string
+}
+
+variable "dynamodb_table_arn" {
+  description = "ARN of the DynamoDB audit table (granted to the operator IRSA role)"
+  type        = string
+}
+
+variable "cloudwatch_namespace" {
+  description = "CloudWatch metrics namespace (scopes the PutMetricData permission)"
+  type        = string
+}
+
+variable "bedrock_model_id" {
+  description = "Bedrock model ID granted to the operator IRSA role"
+  type        = string
+}
+
+variable "operator_namespace" {
+  description = "Kubernetes namespace the operator is deployed into"
+  type        = string
+  default     = "k8s-ai-operator"
+}
+
+variable "operator_service_account_name" {
+  description = "Kubernetes ServiceAccount name used by the operator pod"
+  type        = string
+  default     = "k8s-ai-operator"
+}

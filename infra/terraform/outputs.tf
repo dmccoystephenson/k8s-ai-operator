@@ -48,3 +48,8 @@ output "eks_cluster_certificate_authority" {
   value       = module.eks.cluster_certificate_authority
   sensitive   = true
 }
+
+output "eks_irsa_role_arn" {
+  description = "ARN of the IRSA role — set as the eks.amazonaws.com/role-arn ServiceAccount annotation when installing the Helm chart"
+  value       = module.eks.irsa_role_arn
+}
