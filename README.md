@@ -143,7 +143,10 @@ All AWS resources (Lambda, API Gateway, DynamoDB, IAM, EKS, CloudWatch) are
 managed by the Terraform configuration in `infra/terraform/`.
 
 **Prerequisites:** Terraform ≥ 1.6, AWS CLI configured with appropriate
-credentials.
+credentials. The Lambda module requires a built application JAR — build it first:
+
+    # Build the JAR (from the repo root)
+    ./mvnw package -DskipTests
 
     cd infra/terraform
 
@@ -183,6 +186,9 @@ The operator's Kubernetes manifests are packaged as a Helm chart in
 **Prerequisites:** Helm ≥ 3, `kubectl` pointed at the target cluster (update
 kubeconfig after `terraform apply`).
 
+All commands below are run from the **repo root** (`cd ../..` if you are still
+in `infra/terraform`).
+
     # Update kubeconfig for the EKS cluster created by Terraform
     aws eks update-kubeconfig --name k8s-ai-operator-dev --region us-east-2
 
@@ -192,7 +198,7 @@ for Service Accounts (IRSA)**. `terraform apply` creates a dedicated IRSA role
 and prints its ARN as the `eks_irsa_role_arn` output. Pass that ARN as a
 ServiceAccount annotation at install time:
 
-    # Read the IRSA role ARN from Terraform
+    # Read the IRSA role ARN (run from infra/terraform, or use -chdir from root)
     IRSA_ROLE_ARN=$(terraform -chdir=infra/terraform output -raw eks_irsa_role_arn)
 
 The most reliable way to supply the annotation is via an override `values.yaml`
@@ -203,7 +209,7 @@ The most reliable way to supply the annotation is via an override `values.yaml`
       annotations:
         eks.amazonaws.com/role-arn: "<IRSA_ROLE_ARN>"
 
-    # First-time install
+    # First-time install (from repo root)
     helm install k8s-ai-operator ./charts/k8s-ai-operator \
       --namespace k8s-ai-operator --create-namespace \
       -f irsa-values.yaml \
@@ -228,6 +234,7 @@ Key configurable values (override with `--set` or a custom `values.yaml`):
 | `aws.dynamodb.tableName` | `K8sAgentExecutions` | Audit table name |
 | `aws.cloudwatch.namespace` | `K8sAiOperator/Execution` | Metrics namespace |
 | `serviceAccount.annotations` | `{}` | Annotations on the ServiceAccount — set `eks.amazonaws.com/role-arn` to the IRSA role ARN from Terraform |
+| `service.type` | `ClusterIP` | Service type — set to `LoadBalancer` to expose the API externally |
 
 #### Local API Emulation
 

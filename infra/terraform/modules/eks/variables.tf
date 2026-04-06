@@ -84,3 +84,9 @@ variable "operator_service_account_name" {
   type        = string
   default     = "k8s-ai-operator"
 }
+
+variable "endpoint_public_access" {
+  description = "Whether the EKS cluster API server endpoint is publicly accessible. Set to false in production to restrict access to within the VPC."
+  type        = bool
+  default     = true
+}

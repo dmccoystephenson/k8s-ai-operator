@@ -137,7 +137,7 @@ resource "aws_route_table" "private" {
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main[count.index].id
+    nat_gateway_id = aws_nat_gateway.main[count.index % length(aws_nat_gateway.main)].id
   }
 
   tags = {
@@ -215,4 +215,5 @@ module "eks" {
   dynamodb_table_arn             = module.dynamodb.table_arn
   cloudwatch_namespace           = var.cloudwatch_namespace
   bedrock_model_id               = var.bedrock_model_id
+  endpoint_public_access         = var.eks_endpoint_public_access
 }

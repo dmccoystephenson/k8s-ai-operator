@@ -62,7 +62,8 @@ resource "aws_iam_policy" "operator_policy" {
           "logs:PutLogEvents"
         ]
         Resource = [
-          "arn:aws:logs:${var.aws_region}:${var.account_id}:log-group:/aws/lambda/*"
+          "arn:aws:logs:${var.aws_region}:${var.account_id}:log-group:/aws/lambda/*",
+          "arn:aws:logs:${var.aws_region}:${var.account_id}:log-group:/aws/lambda/*:log-stream:*"
         ]
       }
     ]

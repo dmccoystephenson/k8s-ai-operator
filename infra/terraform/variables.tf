@@ -109,7 +109,13 @@ variable "public_subnet_cidrs" {
 }
 
 variable "private_subnet_cidrs" {
-  description = "CIDR blocks for the private subnets (one per AZ)"
+  description = "CIDR blocks for the private subnets (one per AZ). If more private than public CIDRs are provided, excess private subnets share NAT gateways in a round-robin distribution."
   type        = list(string)
   default     = ["10.0.3.0/24", "10.0.4.0/24"]
+}
+
+variable "eks_endpoint_public_access" {
+  description = "Whether the EKS API server endpoint is publicly accessible. Recommended false for production."
+  type        = bool
+  default     = true
 }

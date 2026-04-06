@@ -26,6 +26,7 @@ eks_node_instance_type = "t3.medium"
 eks_node_desired_count = 2
 eks_node_min_count     = 2
 eks_node_max_count     = 5
+eks_endpoint_public_access = false
 
 # Networking
 vpc_cidr             = "10.1.0.0/16"
