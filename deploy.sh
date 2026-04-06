@@ -2,6 +2,11 @@
 # deploy.sh — Build, push, and deploy k8s-ai-operator to EKS
 # Prerequisites: AWS CLI, Docker, kubectl, Maven, jq
 # Run from the project root after setup-eks.sh has completed.
+#
+# DEPRECATED: This script is no longer the recommended way to deploy
+# k8s-ai-operator.  Use the Helm chart in charts/k8s-ai-operator/ to deploy
+# the operator to Kubernetes, and the Terraform configuration in infra/terraform/
+# to manage AWS infrastructure.  See README.md for the updated workflow.
 set -euo pipefail
 
 REGION="us-east-2"

@@ -137,21 +137,98 @@ No AWS credentials are required when running with `-Dspring.profiles.active=loca
 
 ### AWS Deployment
 
+#### Provision Infrastructure with Terraform
+
+All AWS resources (Lambda, API Gateway, DynamoDB, IAM, EKS, CloudWatch) are
+managed by the Terraform configuration in `infra/terraform/`.
+
+**Prerequisites:** Terraform ≥ 1.6, AWS CLI configured with appropriate
+credentials.
+
+    cd infra/terraform
+
+    # Initialise the working directory (downloads providers, sets up backend)
+    terraform init
+
+    # Preview changes for the dev environment
+    terraform plan -var-file=dev.tfvars
+
+    # Apply (provisions all AWS resources)
+    terraform apply -var-file=dev.tfvars
+
+Use `prod.tfvars` for production:
+
+    terraform apply -var-file=prod.tfvars
+
+The `infra/terraform/` directory layout:
+
+    infra/terraform/
+    ├── main.tf          # Root module — VPC, networking, module wiring
+    ├── variables.tf     # All configurable inputs
+    ├── outputs.tf       # Resource ARNs / URLs
+    ├── dev.tfvars       # Dev environment overrides
+    ├── prod.tfvars      # Prod environment overrides
+    └── modules/
+        ├── lambda/      # Lambda function + CloudWatch log group
+        ├── api-gateway/ # REST API, /k8s/execute route, stage
+        ├── dynamodb/    # K8sAgentExecutions audit table
+        ├── iam/         # Execution role + least-privilege policy
+        └── eks/         # EKS cluster + managed node group
+
+#### Deploy the Operator to Kubernetes with Helm
+
+The operator's Kubernetes manifests are packaged as a Helm chart in
+`charts/k8s-ai-operator/`.
+
+**Prerequisites:** Helm ≥ 3, `kubectl` pointed at the target cluster (update
+kubeconfig after `terraform apply`).
+
+    # Update kubeconfig for the EKS cluster created by Terraform
+    aws eks update-kubeconfig --name k8s-ai-operator-dev --region us-east-2
+
+    # First-time install
+    helm install k8s-ai-operator ./charts/k8s-ai-operator \
+      --namespace k8s-ai-operator --create-namespace \
+      --set image.repository=<ACCOUNT_ID>.dkr.ecr.us-east-2.amazonaws.com/k8s-ai-operator \
+      --set image.tag=latest
+
+    # Upgrade (e.g. after pushing a new image)
+    helm upgrade k8s-ai-operator ./charts/k8s-ai-operator \
+      --namespace k8s-ai-operator \
+      --set image.tag=<new-tag>
+
+Key configurable values (override with `--set` or a custom `values.yaml`):
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `image.repository` | `k8s-ai-operator` | Container image repository |
+| `image.tag` | chart `appVersion` | Image tag |
+| `replicaCount` | `1` | Number of operator replicas |
+| `aws.region` | `us-east-2` | AWS region |
+| `aws.bedrock.modelId` | `anthropic.claude-3-sonnet-20240229-v1:0` | Bedrock model |
+| `aws.dynamodb.tableName` | `K8sAgentExecutions` | Audit table name |
+| `aws.cloudwatch.namespace` | `K8sAiOperator/Execution` | Metrics namespace |
+
 #### Local API Emulation
 
     sam local start-api
 
-### Deploy to AWS
+#### Deploy to AWS via SAM (alternative to Terraform)
 
     sam build
     sam deploy --guided
 
-### Deploy to EC2
+#### Deploy to EC2 (deprecated)
+
+> ⚠️ **Deprecated** — use Terraform + Helm instead (see above).
 
     chmod +x setup-ec2.sh
     ./setup-ec2.sh
 
-### Provision a test Kubernetes cluster (EKS)
+#### Provision a test Kubernetes cluster (deprecated)
+
+> ⚠️ **Deprecated** — use `infra/terraform/` with the `eks` module instead
+> (see above).
 
     chmod +x setup-eks.sh
     ./setup-eks.sh
