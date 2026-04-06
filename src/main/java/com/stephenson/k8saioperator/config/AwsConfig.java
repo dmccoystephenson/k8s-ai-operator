@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
@@ -29,6 +30,7 @@ public class AwsConfig {
     }
 
     @Bean
+    @Profile("!local")
     public DynamoDbClient dynamoDbClient() {
         return DynamoDbClient.builder()
                 .region(Region.of(region))
@@ -36,6 +38,7 @@ public class AwsConfig {
     }
 
     @Bean
+    @Profile("!local")
     public CloudWatchClient cloudWatchClient() {
         return CloudWatchClient.builder()
                 .region(Region.of(region))

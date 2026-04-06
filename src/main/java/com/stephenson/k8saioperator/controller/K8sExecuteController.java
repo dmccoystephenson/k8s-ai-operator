@@ -1,6 +1,6 @@
 package com.stephenson.k8saioperator.controller;
 
-import com.stephenson.k8saioperator.metrics.CloudWatchMetricsEmitter;
+import com.stephenson.k8saioperator.metrics.MetricsEmitter;
 import com.stephenson.k8saioperator.model.ExecuteRequest;
 import com.stephenson.k8saioperator.model.ExecuteResponse;
 import com.stephenson.k8saioperator.model.ParsedCommand;
@@ -22,9 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
  * Request flow:
  * 1. Parse user prompt via the configured LLM provider
  * 2. Enforce verb allowlist (VerbGuard)
- * 3. Execute against mock K8s client
- * 4. Persist audit record in DynamoDB
- * 5. Emit CloudWatch metrics
+ * 3. Execute against the K8s client
+ * 4. Persist audit record
+ * 5. Emit metrics
  */
 @Slf4j
 @RestController
@@ -36,7 +36,7 @@ public class K8sExecuteController {
     private final VerbGuard verbGuard;
     private final K8sClientAdapter k8sClientAdapter;
     private final AuditService auditService;
-    private final CloudWatchMetricsEmitter metricsEmitter;
+    private final MetricsEmitter metricsEmitter;
 
     @PostMapping("/execute")
     public ResponseEntity<ExecuteResponse> execute(@RequestBody ExecuteRequest request) {
