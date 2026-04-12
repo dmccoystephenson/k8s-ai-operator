@@ -50,6 +50,11 @@ aws:
     tableName: "K8sAgentExecutions"
   cloudwatch:
     namespace: "K8sAiOperator/Execution"
+  # Optional: name of an existing Kubernetes Secret that provides AWS credentials
+  # as AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.
+  # Use this when deploying to a non-AWS cluster (e.g. Linode LKE) where IRSA
+  # is not available. Leave empty when using IRSA on EKS.
+  credentialsSecret: ""
 
 # Spring Boot active profile (set to "lambda" when running on Lambda).
 springProfilesActive: ""
