@@ -137,21 +137,220 @@ No AWS credentials are required when running with `-Dspring.profiles.active=loca
 
 ### AWS Deployment
 
+#### Option A — Provision a new cluster with Terraform, then deploy with Helm
+
+All AWS resources (Lambda, API Gateway, DynamoDB, IAM, EKS, CloudWatch) are
+managed by the Terraform configuration in `infra/terraform/`.
+
+**Prerequisites:** Terraform ≥ 1.6, AWS CLI configured with appropriate
+credentials. The Lambda module requires a built application JAR — build it first:
+
+    # Build the JAR (from the repo root)
+    ./mvnw package -DskipTests
+
+    cd infra/terraform
+
+    # Initialise the working directory (downloads providers, sets up backend)
+    terraform init
+
+    # Preview changes for the dev environment
+    terraform plan -var-file=dev.tfvars
+
+    # Apply (provisions all AWS resources)
+    terraform apply -var-file=dev.tfvars
+
+Use `prod.tfvars` for production:
+
+    terraform apply -var-file=prod.tfvars
+
+The `infra/terraform/` directory layout:
+
+    infra/terraform/
+    ├── main.tf                # Root module — VPC, networking, module wiring
+    ├── variables.tf           # All configurable inputs
+    ├── outputs.tf             # Resource ARNs / URLs
+    ├── dev.tfvars             # Dev environment overrides
+    ├── prod.tfvars            # Prod environment overrides
+    ├── existing-cluster/      # Lightweight config for pre-existing EKS clusters (Option B)
+    ├── linode-cluster/        # LKE cluster + IAM user for Linode deployments (Option C)
+    └── modules/
+        ├── irsa/              # Standalone IRSA role module (used by eks/ and existing-cluster/)
+        ├── iam-user/          # IAM user + access key for non-IRSA clusters (used by linode-cluster/)
+        ├── lambda/            # Lambda function + CloudWatch log group
+        ├── api-gateway/       # REST API, /k8s/execute route, stage
+        ├── dynamodb/          # K8sAgentExecutions audit table
+        ├── iam/               # Execution role + least-privilege policy
+        └── eks/               # EKS cluster + managed node group
+
+#### Option B — Deploy to an existing EKS cluster
+
+If you already have an EKS cluster (e.g. provisioned by a separate infrastructure
+repository), use the lightweight `infra/terraform/existing-cluster/` configuration.
+It creates only the resources that are missing: the DynamoDB audit table and an
+IRSA role scoped to your cluster's OIDC provider.
+
+    cd infra/terraform/existing-cluster
+
+    # Copy the example vars file and edit it
+    cp existing-cluster.tfvars.example existing-cluster.tfvars
+    # Set cluster_name, aws_region, environment, etc.
+
+    terraform init
+    terraform apply -var-file=existing-cluster.tfvars
+
+    # Read the IRSA role ARN
+    IRSA_ROLE_ARN=$(terraform output -raw irsa_role_arn)
+
+If the cluster already has an OIDC provider registered (which is the case for
+clusters provisioned by the OMCSI project or the eks module in this repo), the
+`aws_iam_openid_connect_provider` resource will conflict. Import it first:
+
+    # Get the existing OIDC provider ARN
+    OIDC_ARN=$(aws eks describe-cluster --name <your-cluster> \
+      --query "cluster.identity.oidc.issuer" --output text | \
+      sed 's|https://||' | \
+      xargs -I{} aws iam list-open-id-connect-providers \
+        --query "OpenIDConnectProviderList[?contains(Arn,'{}')].Arn" \
+        --output text)
+
+    terraform import aws_iam_openid_connect_provider.oidc "$OIDC_ARN"
+    terraform apply -var-file=existing-cluster.tfvars
+
+#### Option C — Deploy to a Linode Kubernetes Engine (LKE) cluster
+
+The `infra/terraform/linode-cluster/` configuration provisions a full LKE cluster
+and all required AWS resources (DynamoDB audit table, IAM user with least-privilege
+access key). Because LKE clusters do not support AWS IRSA, the operator
+authenticates with AWS via a dedicated IAM user whose credentials are stored as a
+Kubernetes Secret.
+
+**Prerequisites:** Terraform ≥ 1.6, a [Linode personal access token](https://cloud.linode.com/profile/tokens)
+with read/write LKE permissions, AWS CLI configured, and `kubectl`.
+
+    cd infra/terraform/linode-cluster
+
+    # Copy and edit the example vars file
+    cp linode-cluster.tfvars.example linode-cluster.tfvars
+    # Set linode_token, linode_region, cluster_name, aws_region, etc.
+
+    terraform init
+    terraform apply -var-file=linode-cluster.tfvars
+
+> ⚠️ **Terraform state security** — the state file produced by this apply will
+> contain the Linode API token and the generated AWS secret access key in
+> plaintext. Ensure state is stored in a secure, encrypted backend (e.g. the
+> S3 backend with server-side encryption and a DynamoDB lock table as shown in
+> the commented-out `backend "s3"` block) and never committed or shared. Do not
+> use local state in production.
+
+    # Retrieve credentials (these are sensitive — do not log or commit them)
+    terraform output -raw kubeconfig | base64 -d > /tmp/lke-kubeconfig.yaml
+    export KUBECONFIG=/tmp/lke-kubeconfig.yaml
+
+    AWS_KEY_ID=$(terraform output -raw aws_access_key_id)
+    AWS_KEY_SECRET=$(terraform output -raw aws_secret_access_key)
+
+Create the Kubernetes Secret that the operator pod will use for AWS credentials:
+
+    kubectl create namespace k8s-ai-operator --dry-run=client -o yaml | kubectl apply -f -
+
+    kubectl create secret generic k8s-ai-operator-aws-credentials \
+      --namespace k8s-ai-operator \
+      --from-literal=AWS_ACCESS_KEY_ID="$AWS_KEY_ID" \
+      --from-literal=AWS_SECRET_ACCESS_KEY="$AWS_KEY_SECRET"
+
+Install the Helm chart, pointing it at the credentials secret:
+
+    # Return to repo root first
+    cd ../../..
+
+    helm install k8s-ai-operator ./charts/k8s-ai-operator \
+      --namespace k8s-ai-operator --create-namespace \
+      --set image.repository=<your-registry>/k8s-ai-operator \
+      --set image.tag=latest \
+      --set aws.region=us-east-2 \
+      --set aws.credentialsSecret=k8s-ai-operator-aws-credentials
+
+#### Deploy the Operator to Kubernetes with Helm (EKS — Options A & B)
+
+The operator's Kubernetes manifests are packaged as a Helm chart in
+`charts/k8s-ai-operator/`.
+
+**Prerequisites:** Helm ≥ 3, `kubectl` pointed at the target cluster.
+
+All commands below are run from the **repo root** (`cd ../..` if you are still
+in an `infra/terraform` subdirectory).
+
+    # Point kubectl at the cluster (adjust name/region as needed)
+    aws eks update-kubeconfig --name <cluster-name> --region us-east-2
+
+The operator pod needs AWS credentials to call Bedrock, write audit records to
+DynamoDB, and emit CloudWatch metrics. The recommended approach is **IAM Roles
+for Service Accounts (IRSA)**. The Terraform configurations in both Option A and
+Option B output an `irsa_role_arn`. Pass that ARN as a ServiceAccount annotation
+at install time:
+
+    # Read the IRSA role ARN (run from whichever terraform directory you used)
+    IRSA_ROLE_ARN=$(terraform output -raw irsa_role_arn)       # Option B
+    # or
+    IRSA_ROLE_ARN=$(terraform output -raw eks_irsa_role_arn)   # Option A
+
+The most reliable way to supply the annotation is via an override `values.yaml`
+(avoids shell-escaping issues with dots in Helm `--set` keys):
+
+    # irsa-values.yaml
+    serviceAccount:
+      annotations:
+        eks.amazonaws.com/role-arn: "<IRSA_ROLE_ARN>"
+
+    # First-time install (from repo root)
+    helm install k8s-ai-operator ./charts/k8s-ai-operator \
+      --namespace k8s-ai-operator --create-namespace \
+      -f irsa-values.yaml \
+      --set image.repository=<ACCOUNT_ID>.dkr.ecr.us-east-2.amazonaws.com/k8s-ai-operator \
+      --set image.tag=latest
+
+    # Upgrade (e.g. after pushing a new image)
+    helm upgrade k8s-ai-operator ./charts/k8s-ai-operator \
+      --namespace k8s-ai-operator \
+      -f irsa-values.yaml \
+      --set image.tag=<new-tag>
+
+Key configurable values (override with `--set` or a custom `values.yaml`):
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `image.repository` | `k8s-ai-operator` | Container image repository |
+| `image.tag` | chart `appVersion` | Image tag |
+| `replicaCount` | `1` | Number of operator replicas |
+| `aws.region` | `us-east-2` | AWS region |
+| `aws.bedrock.modelId` | `anthropic.claude-3-sonnet-20240229-v1:0` | Bedrock model |
+| `aws.dynamodb.tableName` | `K8sAgentExecutions` | Audit table name |
+| `aws.cloudwatch.namespace` | `K8sAiOperator/Execution` | Metrics namespace |
+| `aws.credentialsSecret` | `""` | Name of a Kubernetes Secret with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` — use for non-IRSA clusters (e.g. Linode LKE) |
+| `serviceAccount.annotations` | `{}` | Annotations on the ServiceAccount — set `eks.amazonaws.com/role-arn` to the IRSA role ARN from Terraform |
+| `service.type` | `ClusterIP` | Service type — set to `LoadBalancer` to expose the API externally |
+
 #### Local API Emulation
 
     sam local start-api
 
-### Deploy to AWS
+#### Deploy to AWS via SAM (alternative to Terraform)
 
     sam build
     sam deploy --guided
 
-### Deploy to EC2
+#### Deploy to EC2 (deprecated)
+
+> ⚠️ **Deprecated** — use Terraform + Helm instead (see above).
 
     chmod +x setup-ec2.sh
     ./setup-ec2.sh
 
-### Provision a test Kubernetes cluster (EKS)
+#### Provision a test Kubernetes cluster (deprecated)
+
+> ⚠️ **Deprecated** — use `infra/terraform/` with the `eks` module instead
+> (see above).
 
     chmod +x setup-eks.sh
     ./setup-eks.sh

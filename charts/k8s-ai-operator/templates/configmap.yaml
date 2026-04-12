@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "k8s-ai-operator.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "k8s-ai-operator.labels" . | nindent 4 }}
+data:
+  AWS_REGION: {{ .Values.aws.region | quote }}
+  BEDROCK_MODEL_ID: {{ .Values.aws.bedrock.modelId | quote }}
+  BEDROCK_MAX_TOKENS: {{ .Values.aws.bedrock.maxTokens | quote }}
+  DYNAMODB_TABLE: {{ .Values.aws.dynamodb.tableName | quote }}
+  CLOUDWATCH_NAMESPACE: {{ .Values.aws.cloudwatch.namespace | quote }}
+  {{- if .Values.springProfilesActive }}
+  SPRING_PROFILES_ACTIVE: {{ .Values.springProfilesActive | quote }}
+  {{- end }}
