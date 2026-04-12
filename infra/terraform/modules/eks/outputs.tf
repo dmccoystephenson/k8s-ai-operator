@@ -20,5 +20,5 @@ output "node_group_role_arn" {
 
 output "irsa_role_arn" {
   description = "ARN of the IRSA role to annotate the operator ServiceAccount with"
-  value       = aws_iam_role.irsa_operator.arn
+  value       = module.irsa.irsa_role_arn
 }

@@ -137,7 +137,7 @@ No AWS credentials are required when running with `-Dspring.profiles.active=loca
 
 ### AWS Deployment
 
-#### Provision Infrastructure with Terraform
+#### Option A — Provision a new cluster with Terraform, then deploy with Helm
 
 All AWS resources (Lambda, API Gateway, DynamoDB, IAM, EKS, CloudWatch) are
 managed by the Terraform configuration in `infra/terraform/`.
@@ -166,40 +166,77 @@ Use `prod.tfvars` for production:
 The `infra/terraform/` directory layout:
 
     infra/terraform/
-    ├── main.tf          # Root module — VPC, networking, module wiring
-    ├── variables.tf     # All configurable inputs
-    ├── outputs.tf       # Resource ARNs / URLs
-    ├── dev.tfvars       # Dev environment overrides
-    ├── prod.tfvars      # Prod environment overrides
+    ├── main.tf                # Root module — VPC, networking, module wiring
+    ├── variables.tf           # All configurable inputs
+    ├── outputs.tf             # Resource ARNs / URLs
+    ├── dev.tfvars             # Dev environment overrides
+    ├── prod.tfvars            # Prod environment overrides
+    ├── existing-cluster/      # Lightweight config for pre-existing clusters (Option B)
     └── modules/
-        ├── lambda/      # Lambda function + CloudWatch log group
-        ├── api-gateway/ # REST API, /k8s/execute route, stage
-        ├── dynamodb/    # K8sAgentExecutions audit table
-        ├── iam/         # Execution role + least-privilege policy
-        └── eks/         # EKS cluster + managed node group
+        ├── irsa/              # Standalone IRSA role module (used by eks/ and existing-cluster/)
+        ├── lambda/            # Lambda function + CloudWatch log group
+        ├── api-gateway/       # REST API, /k8s/execute route, stage
+        ├── dynamodb/          # K8sAgentExecutions audit table
+        ├── iam/               # Execution role + least-privilege policy
+        └── eks/               # EKS cluster + managed node group
+
+#### Option B — Deploy to an existing Kubernetes cluster
+
+If you already have an EKS cluster (e.g. provisioned by a separate infrastructure
+repository), use the lightweight `infra/terraform/existing-cluster/` configuration.
+It creates only the resources that are missing: the DynamoDB audit table and an
+IRSA role scoped to your cluster's OIDC provider.
+
+    cd infra/terraform/existing-cluster
+
+    # Copy the example vars file and edit it
+    cp existing-cluster.tfvars.example existing-cluster.tfvars
+    # Set cluster_name, aws_region, environment, etc.
+
+    terraform init
+    terraform apply -var-file=existing-cluster.tfvars
+
+    # Read the IRSA role ARN
+    IRSA_ROLE_ARN=$(terraform output -raw irsa_role_arn)
+
+If the cluster already has an OIDC provider registered (which is the case for
+clusters provisioned by the OMCSI project or the eks module in this repo), the
+`aws_iam_openid_connect_provider` resource will conflict. Import it first:
+
+    # Get the existing OIDC provider ARN
+    OIDC_ARN=$(aws eks describe-cluster --name <your-cluster> \
+      --query "cluster.identity.oidc.issuer" --output text | \
+      sed 's|https://||' | \
+      xargs -I{} aws iam list-open-id-connect-providers \
+        --query "OpenIDConnectProviderList[?contains(Arn,'{}')].Arn" \
+        --output text)
+
+    terraform import aws_iam_openid_connect_provider.oidc "$OIDC_ARN"
+    terraform apply -var-file=existing-cluster.tfvars
 
 #### Deploy the Operator to Kubernetes with Helm
 
 The operator's Kubernetes manifests are packaged as a Helm chart in
 `charts/k8s-ai-operator/`.
 
-**Prerequisites:** Helm ≥ 3, `kubectl` pointed at the target cluster (update
-kubeconfig after `terraform apply`).
+**Prerequisites:** Helm ≥ 3, `kubectl` pointed at the target cluster.
 
 All commands below are run from the **repo root** (`cd ../..` if you are still
-in `infra/terraform`).
+in an `infra/terraform` subdirectory).
 
-    # Update kubeconfig for the EKS cluster created by Terraform
-    aws eks update-kubeconfig --name k8s-ai-operator-dev --region us-east-2
+    # Point kubectl at the cluster (adjust name/region as needed)
+    aws eks update-kubeconfig --name <cluster-name> --region us-east-2
 
 The operator pod needs AWS credentials to call Bedrock, write audit records to
 DynamoDB, and emit CloudWatch metrics. The recommended approach is **IAM Roles
-for Service Accounts (IRSA)**. `terraform apply` creates a dedicated IRSA role
-and prints its ARN as the `eks_irsa_role_arn` output. Pass that ARN as a
-ServiceAccount annotation at install time:
+for Service Accounts (IRSA)**. The Terraform configurations in both Option A and
+Option B output an `irsa_role_arn`. Pass that ARN as a ServiceAccount annotation
+at install time:
 
-    # Read the IRSA role ARN (run from infra/terraform, or use -chdir from root)
-    IRSA_ROLE_ARN=$(terraform -chdir=infra/terraform output -raw eks_irsa_role_arn)
+    # Read the IRSA role ARN (run from whichever terraform directory you used)
+    IRSA_ROLE_ARN=$(terraform output -raw irsa_role_arn)       # Option B
+    # or
+    IRSA_ROLE_ARN=$(terraform output -raw eks_irsa_role_arn)   # Option A
 
 The most reliable way to supply the annotation is via an override `values.yaml`
 (avoids shell-escaping issues with dots in Helm `--set` keys):
