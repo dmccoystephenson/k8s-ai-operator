@@ -47,12 +47,32 @@ resource "aws_api_gateway_deployment" "operator" {
   rest_api_id = aws_api_gateway_rest_api.operator.id
 
   triggers = {
-    redeployment = sha1(jsonencode([
-      aws_api_gateway_resource.k8s.id,
-      aws_api_gateway_resource.execute.id,
-      aws_api_gateway_method.post_execute.id,
-      aws_api_gateway_integration.post_execute_lambda.id,
-    ]))
+    redeployment = sha1(jsonencode({
+      rest_api = {
+        name        = aws_api_gateway_rest_api.operator.name
+        description = aws_api_gateway_rest_api.operator.description
+      }
+      resources = {
+        k8s = {
+          parent_id = aws_api_gateway_rest_api.operator.root_resource_id
+          path_part = aws_api_gateway_resource.k8s.path_part
+        }
+        execute = {
+          parent_id = aws_api_gateway_resource.k8s.id
+          path_part = aws_api_gateway_resource.execute.path_part
+        }
+      }
+      method = {
+        http_method   = aws_api_gateway_method.post_execute.http_method
+        authorization = aws_api_gateway_method.post_execute.authorization
+      }
+      integration = {
+        http_method             = aws_api_gateway_integration.post_execute_lambda.http_method
+        integration_http_method = aws_api_gateway_integration.post_execute_lambda.integration_http_method
+        type                    = aws_api_gateway_integration.post_execute_lambda.type
+        uri                     = aws_api_gateway_integration.post_execute_lambda.uri
+      }
+    }))
   }
 
   lifecycle {

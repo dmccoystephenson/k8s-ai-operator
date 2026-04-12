@@ -236,6 +236,13 @@ with read/write LKE permissions, AWS CLI configured, and `kubectl`.
     terraform init
     terraform apply -var-file=linode-cluster.tfvars
 
+> ⚠️ **Terraform state security** — the state file produced by this apply will
+> contain the Linode API token and the generated AWS secret access key in
+> plaintext. Ensure state is stored in a secure, encrypted backend (e.g. the
+> S3 backend with server-side encryption and a DynamoDB lock table as shown in
+> the commented-out `backend "s3"` block) and never committed or shared. Do not
+> use local state in production.
+
     # Retrieve credentials (these are sensitive — do not log or commit them)
     terraform output -raw kubeconfig | base64 -d > /tmp/lke-kubeconfig.yaml
     export KUBECONFIG=/tmp/lke-kubeconfig.yaml
@@ -254,7 +261,9 @@ Create the Kubernetes Secret that the operator pod will use for AWS credentials:
 
 Install the Helm chart, pointing it at the credentials secret:
 
-    # From repo root
+    # Return to repo root first
+    cd ../../..
+
     helm install k8s-ai-operator ./charts/k8s-ai-operator \
       --namespace k8s-ai-operator --create-namespace \
       --set image.repository=<your-registry>/k8s-ai-operator \
