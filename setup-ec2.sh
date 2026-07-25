@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # setup-ec2.sh — Provision EC2 instance for k8s-ai-operator
+#
+# DEPRECATED: This script is no longer the recommended way to provision
+# infrastructure for k8s-ai-operator.  Use the Terraform configuration in
+# infra/terraform/ instead.  See README.md for the updated workflow.
 set -euo pipefail
 
 REGION="us-east-2"

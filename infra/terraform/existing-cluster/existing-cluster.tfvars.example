@@ -1,0 +1,18 @@
+# existing-cluster.tfvars.example
+# Copy to existing-cluster.tfvars and fill in the values for your environment.
+# Usage:
+#   terraform init
+#   terraform apply -var-file=existing-cluster.tfvars
+
+aws_region   = "us-east-2"
+environment  = "dev"
+cluster_name = "my-existing-eks-cluster"   # <-- replace with your cluster name
+
+bedrock_model_id     = "anthropic.claude-3-sonnet-20240229-v1:0"
+dynamodb_table_name  = "K8sAgentExecutions"
+cloudwatch_namespace = "K8sAiOperator/Execution"
+
+# Kubernetes namespace and ServiceAccount the operator will run under.
+# These must match the values used during helm install.
+operator_namespace            = "k8s-ai-operator"
+operator_service_account_name = "k8s-ai-operator"

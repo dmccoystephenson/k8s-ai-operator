@@ -1,0 +1,24 @@
+# linode-cluster.tfvars.example
+# Copy to linode-cluster.tfvars and fill in the values for your environment.
+# Usage:
+#   terraform init
+#   terraform apply -var-file=linode-cluster.tfvars
+#
+# IMPORTANT: linode-cluster.tfvars contains a sensitive Linode API token and
+# should NEVER be committed to source control. It is already listed in .gitignore.
+
+linode_token  = "YOUR_LINODE_PERSONAL_ACCESS_TOKEN"   # <-- replace
+linode_region = "us-east"   # see https://api.linode.com/v4/regions
+
+cluster_name = "k8s-ai-operator"
+environment  = "dev"
+
+k8s_version = "1.29"
+node_type   = "g6-standard-2"   # 2 vCPU, 4 GB RAM
+node_count  = 2
+
+# AWS credentials for the Bedrock/DynamoDB/CloudWatch API calls
+aws_region           = "us-east-2"
+bedrock_model_id     = "anthropic.claude-3-sonnet-20240229-v1:0"
+dynamodb_table_name  = "K8sAgentExecutions"
+cloudwatch_namespace = "K8sAiOperator/Execution"

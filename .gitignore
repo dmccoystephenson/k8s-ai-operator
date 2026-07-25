@@ -11,6 +11,10 @@ target/
 *.jks
 *.pfx
 
+### Terraform variable files may contain secrets (e.g. Linode API token) ###
+*.tfvars
+!*.tfvars.example
+
 ### Runtime infrastructure state files ###
 .k8s-agent-state
 .k8s-cluster-state

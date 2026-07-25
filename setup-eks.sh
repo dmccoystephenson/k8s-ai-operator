@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 # setup-eks.sh — Provision an EKS test cluster for k8s-ai-operator
+#
+# DEPRECATED: This script is no longer the recommended way to provision the
+# EKS cluster for k8s-ai-operator.  Use the Terraform configuration in
+# infra/terraform/ (which includes the eks module) and the Helm chart in
+# charts/k8s-ai-operator/ instead.  See README.md for the updated workflow.
 set -euo pipefail
 
 REGION="us-east-2"

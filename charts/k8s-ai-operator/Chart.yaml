@@ -1,0 +1,17 @@
+apiVersion: v2
+name: k8s-ai-operator
+description: AI-powered Kubernetes operator that translates natural language prompts into kubectl commands
+type: application
+version: 0.1.0
+appVersion: "0.0.1-SNAPSHOT"
+keywords:
+  - kubernetes
+  - ai
+  - operator
+  - bedrock
+  - aws
+home: https://github.com/dmccoystephenson/k8s-ai-operator
+sources:
+  - https://github.com/dmccoystephenson/k8s-ai-operator
+maintainers:
+  - name: dmccoystephenson
