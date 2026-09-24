@@ -11,6 +11,7 @@ data:
   BEDROCK_MAX_TOKENS: {{ .Values.aws.bedrock.maxTokens | quote }}
   DYNAMODB_TABLE: {{ .Values.aws.dynamodb.tableName | quote }}
   CLOUDWATCH_NAMESPACE: {{ .Values.aws.cloudwatch.namespace | quote }}
+  USAGE_REPORTING_ENABLED: {{ .Values.usageReporting.enabled | quote }}
   {{- if .Values.springProfilesActive }}
   SPRING_PROFILES_ACTIVE: {{ .Values.springProfilesActive | quote }}
   {{- end }}

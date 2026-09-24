@@ -33,3 +33,19 @@ k8s:
   allowed-verbs: get,apply
   disallowed-verbs: delete,exec,scale,patch
 
+# --- Usage reporting (trace) ---
+# On start-up the operator sends ONE "startup" event to the trace usage-tracking service:
+# the program name ("k8s-ai-operator"), its version, and the tag service=true. Nothing per
+# request, and nothing about prompts, commands, clusters, users, hosts or addresses. Sent off
+# the main thread; a trace server that is down or slow is a dropped report, never a failed
+# start-up or a blocked request. Set USAGE_REPORTING_ENABLED=false (Helm:
+# usageReporting.enabled=false) to turn it off; TRACE_USAGE_REPORTING=off or DO_NOT_TRACK=1
+# also turn it off and win over this setting. The key is the write key issued to
+# k8s-ai-operator; it can only add usage events and is not secret.
+# Details: https://github.com/Stephenson-Software/trace#usage-reporting
+usage-reporting:
+  enabled: ${USAGE_REPORTING_ENABLED:true}
+  endpoint: ${USAGE_REPORTING_ENDPOINT:https://trace.danielstephenson.dev}
+  key: ${USAGE_REPORTING_KEY:f6dqdQ1rHFIPnFT_uUAZsXWfvQJVM8Q3RChj7GqUKGs}
+  # The version tag; filled in from the Maven project version at build time.
+  version: "@project.version@"

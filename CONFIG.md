@@ -166,6 +166,27 @@ k8s:
 
 ---
 
+## usage-reporting.enabled
+
+**Type:** boolean  
+**Default:** `true`  
+**Environment variable:** `USAGE_REPORTING_ENABLED` (Helm: `usageReporting.enabled`)  
+**Description:** Whether the operator sends one `startup` event (program name, version and the tag `service=true`) to the trace usage-tracking service when it starts. Nothing is sent per request, and nothing about prompts, commands, clusters, users or hosts. `TRACE_USAGE_REPORTING=off` or `DO_NOT_TRACK=1` in the environment also turn it off and win over this setting. See [Usage reporting](README.md#usage-reporting).
+
+## usage-reporting.endpoint
+
+**Type:** string  
+**Default:** `https://trace.danielstephenson.dev`  
+**Environment variable:** `USAGE_REPORTING_ENDPOINT`  
+**Description:** The trace service the startup event is sent to.
+
+## usage-reporting.key
+
+**Type:** string  
+**Default:** the write key issued to k8s-ai-operator  
+**Environment variable:** `USAGE_REPORTING_KEY`  
+**Description:** The trace write key. It can only add usage events and is not secret. A blank key turns reporting off.
+
 ## Local Profile (`application-local.yml`)
 
 The following properties are only relevant when running with `spring.profiles.active=local`.

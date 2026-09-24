@@ -25,3 +25,6 @@ k8s:
   allowed-verbs: get,apply
   disallowed-verbs: delete,exec,scale,patch
 
+# Usage reporting stays off in tests so no context start-up ever contacts the trace service.
+usage-reporting:
+  enabled: false
