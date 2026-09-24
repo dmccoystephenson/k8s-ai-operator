@@ -526,6 +526,23 @@ All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
       allowed-verbs: get,apply
       disallowed-verbs: delete,exec,scale,patch
 
+    usage-reporting:
+      enabled: ${USAGE_REPORTING_ENABLED:true}
+
+---
+
+## Usage reporting
+
+Usage reporting is on by default: when the operator starts it sends one `startup` event, carrying its name (`k8s-ai-operator`), its version and the tag `service=true`, to the maintainers' [trace](https://github.com/Stephenson-Software/trace) service at `https://trace.danielstephenson.dev`, so that it is known whether anybody runs it. Nothing is sent per request, and nothing about prompts, commands, clusters, namespaces, users, hosts or IP addresses is ever included. The event goes out on a background thread and is dropped if the trace server is down or slow, so it can never delay start-up or a request. One line is logged at start-up saying whether reporting is on and, if it is off, which switch turned it off.
+
+To turn it off, any one of these is enough:
+
+- `USAGE_REPORTING_ENABLED=false` in the environment (Helm: `--set usageReporting.enabled=false`; `k8s-operator-manifest.yaml`: the `USAGE_REPORTING_ENABLED` entry in the ConfigMap)
+- `TRACE_USAGE_REPORTING=off` (also `false`, `0`, `no`) in the environment — the switch every trace client honours, checked before the operator's own setting
+- `DO_NOT_TRACK=1` (also `true`, `yes`) in the environment, per [consoledonottrack.com](https://consoledonottrack.com)
+
+The bundled `usage-reporting.key` is the write key issued to k8s-ai-operator; it can only add usage events and is not secret. See [`usage-reporting.enabled`](CONFIG.md#usage-reportingenabled) in the Configuration Guide, and for what trace collects and why: https://github.com/Stephenson-Software/trace#usage-reporting
+
 ---
 
 ## IAM — Minimum Required Permissions

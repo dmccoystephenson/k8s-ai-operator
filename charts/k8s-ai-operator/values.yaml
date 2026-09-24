@@ -56,6 +56,13 @@ aws:
   # is not available. Leave empty when using IRSA on EKS.
   credentialsSecret: ""
 
+# Usage reporting: on start-up the operator sends ONE "startup" event (program name,
+# version and service=true) to https://trace.danielstephenson.dev; nothing per request and
+# nothing about prompts, commands or the cluster. Set to false to turn it off.
+# Details: https://github.com/Stephenson-Software/trace#usage-reporting
+usageReporting:
+  enabled: true
+
 # Spring Boot active profile (set to "lambda" when running on Lambda).
 springProfilesActive: ""
 
