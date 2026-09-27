@@ -75,8 +75,12 @@ If you see `BUILD SUCCESS`, the tests have passed.
 Key test cases:
 
 - `VerbGuardTest` — verifies `delete`, `exec`, `scale`, `patch` are blocked unconditionally
-- `K8sExecuteControllerTest` — validates `400` response shape for forbidden intents
+- `K8sExecuteControllerTest` — validates `400` response shape for forbidden intents and `200` shape for allowed ones
 - `BedrockCommandParserTest` — mocks Bedrock responses and asserts parsed command structure
+- `AnthropicCommandParserTest` — mocks Anthropic API responses and asserts parsed command structure
+- `PostgresAuditServiceTest` — verifies audit records for allowed and blocked commands (local profile)
+- `UsageReporterTest` — exercises the startup usage report against a loopback stub
+- `K8sAiOperatorApplicationTests` — verifies the Spring context loads
 
 ---
 
@@ -325,11 +329,14 @@ Key configurable values (override with `--set` or a custom `values.yaml`):
 | `replicaCount` | `1` | Number of operator replicas |
 | `aws.region` | `us-east-2` | AWS region |
 | `aws.bedrock.modelId` | `anthropic.claude-3-sonnet-20240229-v1:0` | Bedrock model |
+| `aws.bedrock.maxTokens` | `512` | Maximum tokens per Bedrock response |
 | `aws.dynamodb.tableName` | `K8sAgentExecutions` | Audit table name |
 | `aws.cloudwatch.namespace` | `K8sAiOperator/Execution` | Metrics namespace |
 | `aws.credentialsSecret` | `""` | Name of a Kubernetes Secret with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` — use for non-IRSA clusters (e.g. Linode LKE) |
 | `serviceAccount.annotations` | `{}` | Annotations on the ServiceAccount — set `eks.amazonaws.com/role-arn` to the IRSA role ARN from Terraform |
 | `service.type` | `ClusterIP` | Service type — set to `LoadBalancer` to expose the API externally |
+| `usageReporting.enabled` | `true` | Send the one startup usage event — see [Usage reporting](#usage-reporting) |
+| `springProfilesActive` | `""` | Sets `SPRING_PROFILES_ACTIVE` when non-empty |
 
 #### Local API Emulation
 
@@ -475,7 +482,7 @@ Disallowed verbs are rejected **after** parsing and **before** execution, even i
 
 - **Hard verb allowlist** — blocked at the service layer, not the prompt layer
 - **Max 1 command per request** — multi-command responses from the model are rejected
-- **Max token cap** — enforced on the Bedrock API call
+- **Max token cap** — enforced on the LLM call (`aws.bedrock.max-tokens` / `anthropic.max-tokens`)
 - **No raw prompt logging** — user prompts are never written to CloudWatch Logs or DynamoDB
 - **Full audit record** on every request (allowed or blocked)
 
@@ -512,15 +519,23 @@ All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
 
 ## Configuration — `application.yml`
 
+    llm:
+      provider: bedrock          # or: anthropic
+
     aws:
       region: us-east-1
       bedrock:
-        model-id: anthropic.claude-3-sonnet
+        model-id: anthropic.claude-3-sonnet-20240229-v1:0
         max-tokens: 512
       dynamodb:
         table-name: K8sAgentExecutions
       cloudwatch:
         namespace: K8sAiOperator/Execution
+
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: claude-sonnet-4-20250514
+      max-tokens: 512
 
     k8s:
       allowed-verbs: get,apply

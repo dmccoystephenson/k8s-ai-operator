@@ -1,6 +1,6 @@
 # Commands Reference — k8s-ai-operator
 
-This service exposes a single REST endpoint. "Commands" are natural-language prompts sent to that endpoint, interpreted by AWS Bedrock (Claude) and translated into Kubernetes operations.
+This service exposes a single REST endpoint. "Commands" are natural-language prompts sent to that endpoint, interpreted by the configured LLM provider (AWS Bedrock or the Anthropic API — see [`llm.provider`](CONFIG.md#llmprovider)) and translated into Kubernetes operations.
 
 ## API Commands
 
@@ -39,6 +39,19 @@ This service exposes a single REST endpoint. "Commands" are natural-language pro
   "request_id": "<string>",
   "allowed": false,
   "reason": "Verb '<verb>' is not permitted"
+}
+```
+
+This response is returned for any verb that is not in `k8s.allowed-verbs`, including verbs that appear in neither the allowed nor the blocked list.
+
+**Error Response — `400 Bad Request`:**
+
+If the prompt cannot be turned into a single command (for example, the model returns an unparseable or multi-command response) or execution fails, the same shape is returned with the error message as the `reason`:
+```json
+{
+  "request_id": "<string>",
+  "allowed": false,
+  "reason": "Model returned multiple commands — only one command per request is permitted"
 }
 ```
 

@@ -14,6 +14,12 @@ All configuration is defined in `src/main/resources/application.yml`. Environmen
 **Default:** `health`  
 **Description:** Which Spring Actuator endpoints are exposed over HTTP. Only the `health` endpoint is enabled by default.
 
+## management.endpoint.health.show-details
+
+**Type:** string (`never` | `when-authorized` | `always`)  
+**Default:** `never`  
+**Description:** Whether `/actuator/health` includes component details. With `never`, the endpoint returns only the overall status (`{"status":"UP"}`), which is all the Helm chart's liveness and readiness probes need.
+
 ## llm.provider
 
 **Type:** string  
@@ -186,6 +192,12 @@ k8s:
 **Default:** the write key issued to k8s-ai-operator  
 **Environment variable:** `USAGE_REPORTING_KEY`  
 **Description:** The trace write key. It can only add usage events and is not secret. A blank key turns reporting off.
+
+## usage-reporting.version
+
+**Type:** string  
+**Default:** the Maven project version (`@project.version@`, filled in at build time)  
+**Description:** The version tag sent with the startup event. This is not meant to be set by hand. If the placeholder was not filled in, the jar manifest's `Implementation-Version` is used instead; if neither is available, the event is sent without a version tag.
 
 ## Local Profile (`application-local.yml`)
 
