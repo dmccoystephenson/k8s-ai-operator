@@ -13,7 +13,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Exercises the reporter against a loopback stub; nothing here ever reaches the real service. */
@@ -72,9 +71,9 @@ class UsageReporterTest {
     void unfilteredVersionPlaceholderIsNotSent() {
         UsageReporter reporter = new UsageReporter(false, endpoint, "a-key", "@project.version@");
         // Outside a packaged jar there is no manifest version either.
-        assertNull(reporter.version());
+        assertEquals("unknown", reporter.version());
         assertEquals("true", reporter.startupTags().get("service"));
-        assertFalse(reporter.startupTags().containsKey("version"));
+        assertFalse(reporter.startupTags().containsKey("version"), "the client adds version itself");
     }
 
     @Test
