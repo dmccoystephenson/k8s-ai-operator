@@ -580,7 +580,7 @@ No S3, no EC2, no wildcard actions.
 
 - User prompts are **not** logged anywhere (CloudWatch or DynamoDB)
 - Verb enforcement is a **code-layer control**, not a prompt-layer control — the model cannot talk its way past it
-- All Bedrock responses are validated against a strict schema before execution
+- LLM responses (Bedrock or Anthropic) are **not** validated against a schema: the parser only requires a single JSON object and reads `verb`, `resource` and `namespace` from it (a missing field becomes an empty string). The verb allowlist is the only check applied before execution; `resource` and `namespace` are passed through unchecked
 - Multi-command responses are rejected with a `400`
 
 ---
