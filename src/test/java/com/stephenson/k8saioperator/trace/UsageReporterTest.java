@@ -14,6 +14,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /** Exercises the reporter against a loopback stub; nothing here ever reaches the real service. */
 class UsageReporterTest {
@@ -45,6 +47,17 @@ class UsageReporterTest {
         String trace = System.getenv(TraceClient.ENV_USAGE_REPORTING);
         String dnt = System.getenv(TraceClient.ENV_DO_NOT_TRACK);
         return (trace != null && !trace.isBlank()) || (dnt != null && !dnt.isBlank());
+    }
+
+    @Test
+    void carriesARandomInstallationIdOnlyWhileReportingIsOn() {
+        UsageReporter on = new UsageReporter(true, endpoint, "a-key", "1.0");
+        UsageReporter off = new UsageReporter(false, endpoint, "a-key", "1.0");
+
+        assertNotNull(on.installId(), "an enabled client carries a random installation ID");
+        assertNull(off.installId(), "a disabled client never makes up an ID");
+        on.close();
+        off.close();
     }
 
     @Test
@@ -87,6 +100,6 @@ class UsageReporterTest {
 
         assertEquals(1, bodies.size());
         assertEquals("{\"application\":\"k8s-ai-operator\",\"name\":\"startup\","
-                + "\"tags\":{\"service\":\"true\",\"version\":\"1.2.3\"}}", bodies.get(0));
+                + "\"tags\":{\"service\":\"true\",\"version\":\"1.2.3\",\"install\":\"" + reporter.installId() + "\"}}", bodies.get(0));
     }
 }
