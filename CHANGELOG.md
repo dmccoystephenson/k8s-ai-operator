@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Usage reporting: one `startup` event (name, version, `service=true`) is sent to the trace service on start-up; off with `USAGE_REPORTING_ENABLED=false` (Helm `usageReporting.enabled=false`), `TRACE_USAGE_REPORTING=off` or `DO_NOT_TRACK=1`
 
+### Fixed
+
+- `Dockerfile` now copies `target/k8s-ai-operator-*.jar`, the artifact `./mvnw clean package` actually produces; the previous `edgescaleai-tech-interview-*.jar` pattern matched nothing, so `docker build` failed
+- README *Security Notes* no longer claims LLM responses are schema-validated; it describes what is enforced (single JSON object + verb allowlist)
+
 ## [0.0.1] — Initial release
 
 ### Added
