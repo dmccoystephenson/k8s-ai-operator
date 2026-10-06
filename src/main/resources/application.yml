@@ -42,7 +42,7 @@ k8s:
 # usageReporting.enabled=false) to turn it off; TRACE_USAGE_REPORTING=off or DO_NOT_TRACK=1
 # also turn it off and win over this setting. The key is the write key issued to
 # k8s-ai-operator; it can only add usage events and is not secret.
-# Details: https://github.com/Stephenson-Software/trace#usage-reporting
+# Details: https://danielstephenson.dev/usage-reporting
 usage-reporting:
   enabled: ${USAGE_REPORTING_ENABLED:true}
   endpoint: ${USAGE_REPORTING_ENDPOINT:https://trace.danielstephenson.dev}
