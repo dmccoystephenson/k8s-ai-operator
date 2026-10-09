@@ -55,6 +55,23 @@ If the prompt cannot be turned into a single command (for example, the model ret
 }
 ```
 
+**Post-Execution Error Response — `500 Internal Server Error`:**
+
+If the command was executed but recording the audit record or emitting metrics then fails, the command is not reported or audited as blocked. The response keeps `allowed: true` and the command output, and `reason` carries the failure:
+```json
+{
+  "request_id": "<string>",
+  "command": {
+    "verb": "get",
+    "resource": "pods",
+    "namespace": "<string>"
+  },
+  "result": "<kubectl output>",
+  "allowed": true,
+  "reason": "Command executed but recording the audit record or metrics failed: <error message>"
+}
+```
+
 ## Allowed Verbs
 
 | Verb | Description |
