@@ -75,7 +75,7 @@ If you see `BUILD SUCCESS`, the tests have passed.
 Key test cases:
 
 - `VerbGuardTest` — verifies `delete`, `exec`, `scale`, `patch` are blocked unconditionally
-- `K8sExecuteControllerTest` — validates `400` response shape for forbidden intents and `200` shape for allowed ones
+- `K8sExecuteControllerTest` — validates `400` response shape for forbidden intents, `200` shape for allowed ones, and `500` shape (still `allowed: true`) when audit or metrics fail after execution
 - `BedrockCommandParserTest` — mocks Bedrock responses and asserts parsed command structure
 - `AnthropicCommandParserTest` — mocks Anthropic API responses and asserts parsed command structure
 - `PostgresAuditServiceTest` — verifies audit records for allowed and blocked commands (local profile)
