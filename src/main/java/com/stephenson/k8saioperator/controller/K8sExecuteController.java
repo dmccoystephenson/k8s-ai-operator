@@ -66,12 +66,27 @@ public class K8sExecuteController {
             String result = k8sClientAdapter.execute(command);
             long latency = System.currentTimeMillis() - startTime;
 
-            // Step 4 — audit
-            auditService.recordAllowed(request.getRequestId(), command, latency);
+            try {
+                // Step 4 — audit
+                auditService.recordAllowed(request.getRequestId(), command, latency);
 
-            // Step 5 — metrics
-            metricsEmitter.emitAllowedCommand();
-            metricsEmitter.emitLatency(latency);
+                // Step 5 — metrics
+                metricsEmitter.emitAllowedCommand();
+                metricsEmitter.emitLatency(latency);
+            } catch (Exception e) {
+                // The command has already run, so it must not be reported or audited as blocked
+                log.error("Post-execution audit/metrics failed for request_id={}: {}",
+                        request.getRequestId(), e.getMessage());
+
+                return ResponseEntity.internalServerError().body(ExecuteResponse.builder()
+                        .requestId(request.getRequestId())
+                        .command(command)
+                        .result(result)
+                        .allowed(true)
+                        .reason("Command executed but recording the audit record or metrics failed: "
+                                + e.getMessage())
+                        .build());
+            }
 
             return ResponseEntity.ok(ExecuteResponse.builder()
                     .requestId(request.getRequestId())

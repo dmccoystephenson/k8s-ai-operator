@@ -16,7 +16,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -25,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Validates the HTTP layer of K8sExecuteController:
  * - 400 shape for forbidden verbs
  * - 200 shape for allowed verbs
+ * - 500 shape (allowed=true, not audited as blocked) when audit/metrics fail after execution
  */
 @WebMvcTest(K8sExecuteController.class)
 class K8sExecuteControllerTest {
@@ -131,6 +136,72 @@ class K8sExecuteControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.allowed").value(false));
+    }
+
+    @Test
+    void auditFailureAfterExecution_returns500WithAllowedTrue_andIsNotRecordedAsBlocked() throws Exception {
+        ParsedCommand getCommand = ParsedCommand.builder()
+                .verb("get")
+                .resource("pods")
+                .namespace("default")
+                .build();
+
+        when(commandParser.parse(anyString())).thenReturn(getCommand);
+        when(verbGuard.isAllowed("get")).thenReturn(true);
+        when(k8sClientAdapter.execute(any(ParsedCommand.class))).thenReturn("sentinel-kubectl-output");
+        doThrow(new RuntimeException("audit store unavailable"))
+                .when(auditService).recordAllowed(anyString(), any(ParsedCommand.class), anyLong());
+
+        String requestBody = """
+                {
+                  "request_id": "req-004",
+                  "user_prompt": "show me the pods"
+                }
+                """;
+
+        mockMvc.perform(post("/k8s/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.request_id").value("req-004"))
+                .andExpect(jsonPath("$.allowed").value(true))
+                .andExpect(jsonPath("$.result").value("sentinel-kubectl-output"))
+                .andExpect(jsonPath("$.reason").value(
+                        "Command executed but recording the audit record or metrics failed: audit store unavailable"));
+
+        verify(auditService, never()).recordBlocked(any(), any(), any(), anyLong());
+        verify(metricsEmitter, never()).emitBlockedCommand();
+    }
+
+    @Test
+    void metricsFailureAfterExecution_returns500WithAllowedTrue_andIsNotRecordedAsBlocked() throws Exception {
+        ParsedCommand getCommand = ParsedCommand.builder()
+                .verb("get")
+                .resource("pods")
+                .namespace("default")
+                .build();
+
+        when(commandParser.parse(anyString())).thenReturn(getCommand);
+        when(verbGuard.isAllowed("get")).thenReturn(true);
+        when(k8sClientAdapter.execute(any(ParsedCommand.class))).thenReturn("sentinel-kubectl-output");
+        doThrow(new RuntimeException("metrics unavailable")).when(metricsEmitter).emitAllowedCommand();
+
+        String requestBody = """
+                {
+                  "request_id": "req-005",
+                  "user_prompt": "show me the pods"
+                }
+                """;
+
+        mockMvc.perform(post("/k8s/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.allowed").value(true))
+                .andExpect(jsonPath("$.result").value("sentinel-kubectl-output"));
+
+        verify(auditService, never()).recordBlocked(any(), any(), any(), anyLong());
+        verify(metricsEmitter, never()).emitBlockedCommand();
     }
 }
 
