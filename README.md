@@ -80,6 +80,7 @@ Key test cases:
 - `AnthropicCommandParserTest` — mocks Anthropic API responses and asserts parsed command structure
 - `PostgresAuditServiceTest` — verifies audit records for allowed and blocked commands (local profile)
 - `DynamoDbAuditServiceTest` — verifies the DynamoDB audit item for allowed and blocked commands, omission of absent fields, and that write failures are swallowed
+- `CloudWatchMetricsEmitterTest` — verifies the CloudWatch metric name, value, unit, namespace and `Service` dimension for each metric, and that publish failures are swallowed
 - `UsageReporterTest` — exercises the startup usage report against a loopback stub
 - `K8sAiOperatorApplicationTests` — verifies the Spring context loads
 
