@@ -81,6 +81,7 @@ Key test cases:
 - `PostgresAuditServiceTest` — verifies audit records for allowed and blocked commands (local profile)
 - `DynamoDbAuditServiceTest` — verifies the DynamoDB audit item for allowed and blocked commands, omission of absent fields, and that write failures are swallowed
 - `CloudWatchMetricsEmitterTest` — verifies the CloudWatch metric name, value, unit, namespace and `Service` dimension for each metric, and that publish failures are swallowed
+- `K8sClientAdapterTest` — verifies the simulated `get` listings per resource type with the namespace appended, the `apply` message, case-insensitive dispatch, and the messages for unrecognised verbs and resource types
 - `UsageReporterTest` — exercises the startup usage report against a loopback stub
 - `K8sAiOperatorApplicationTests` — verifies the Spring context loads
 
