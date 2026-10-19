@@ -83,6 +83,7 @@ Key test cases:
 - `CloudWatchMetricsEmitterTest` — verifies the CloudWatch metric name, value, unit, namespace and `Service` dimension for each metric, and that publish failures are swallowed
 - `K8sClientAdapterTest` — verifies the simulated `get` listings per resource type with the namespace appended, the `apply` message, case-insensitive dispatch, and the messages for unrecognised verbs and resource types
 - `UsageReporterTest` — exercises the startup usage report against a loopback stub
+- `TraceClientTest` — verifies the vendored trace client's opt-out precedence (environment, server-wide file, `enabled`, key), server-wide file and install-ID handling, tag merging and JSON encoding, and the request a report sends to a loopback stub
 - `K8sAiOperatorApplicationTests` — verifies the Spring context loads
 
 ---
