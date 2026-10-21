@@ -84,6 +84,7 @@ Key test cases:
 - `K8sClientAdapterTest` — verifies the simulated `get` listings per resource type with the namespace appended, the `apply` message, case-insensitive dispatch, and the messages for unrecognised verbs and resource types
 - `UsageReporterTest` — exercises the startup usage report against a loopback stub
 - `TraceClientTest` — verifies the vendored trace client's opt-out precedence (environment, server-wide file, `enabled`, key), server-wide file and install-ID handling, tag merging and JSON encoding, and the request a report sends to a loopback stub
+- `TraceInstallIdTest` — verifies that `TRACE_INSTALL_ID` pins the installation ID (trimmed; blank or overlong values are ignored) and where the install-ID file lives on Linux (`$XDG_DATA_HOME` or `~/.local/share`), macOS and Windows
 - `K8sAiOperatorApplicationTests` — verifies the Spring context loads
 
 ---
