@@ -177,6 +177,7 @@ All config values are environment variables injected via the ConfigMap. Override
 | `BEDROCK_MAX_TOKENS` | `512` | Max tokens in Bedrock response |
 | `DYNAMODB_TABLE` | `K8sAgentExecutions` | Audit log table name |
 | `CLOUDWATCH_NAMESPACE` | `K8sAiOperator/Execution` | CloudWatch metrics namespace |
+| `USAGE_REPORTING_ENABLED` | `true` | Send the one startup usage event — set to `false` to turn it off (see [Usage reporting](../README.md#usage-reporting)) |
 
 ---
 
