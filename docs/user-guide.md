@@ -244,7 +244,7 @@ In the AWS Console → CloudWatch → Metrics → Custom namespaces → `K8sAiOp
 
 Available metrics:
 - `AllowedCommands` — count of permitted requests
-- `BlockedCommands` — count of rejected requests
+- `BlockedCommands` — count of rejected requests (blocked verbs, plus requests whose prompt could not be parsed or whose execution failed)
 - `ExecutionLatencyMs` — end-to-end response time
 
 ---
@@ -256,7 +256,7 @@ Available metrics:
 | `deploy.sh` fails at the JAR build step | Make sure Java 21 is installed on EC2: `java -version`. Install with `sudo apt-get install -y openjdk-21-jdk` |
 | Pod stuck in `ImagePullBackOff` | ECR auth issue — re-run `deploy.sh`, it will re-authenticate |
 | Pod stuck in `CrashLoopBackOff` | Check logs: `kubectl logs deployment/k8s-ai-operator -n k8s-ai-operator` |
-| `500` error on every request | Bedrock model access not enabled — check the AWS Console → Bedrock → Model access |
+| `400` with `"allowed": false` on every request, and a `reason` that is a Bedrock error rather than `Verb '<verb>' is not permitted` | Bedrock model access not enabled — check the AWS Console → Bedrock → Model access |
 | LoadBalancer hostname never appears | Run `kubectl get svc -n k8s-ai-operator` and wait a few more minutes |
 | `ssh: Permission denied` | Run `chmod 400 k8s-agent-key.pem` first |
 

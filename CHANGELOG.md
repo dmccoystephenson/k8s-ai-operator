@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The usage-reporting "Details" link (startup notice, docs and config comments) now points at https://danielstephenson.dev/usage-reporting, a public page, instead of a link into a private repository that answered 404. The vendored `TraceClient` is trace-client-java 0.6.1, whose server-wide switch file comment carries the same link.
 - `Dockerfile` now copies `target/k8s-ai-operator-*.jar`, the artifact `./mvnw clean package` actually produces; the previous `edgescaleai-tech-interview-*.jar` pattern matched nothing, so `docker build` failed
 - README *Security Notes* no longer claims LLM responses are schema-validated; it describes what is enforced (single JSON object + verb allowlist)
+- `docs/user-guide.md` *Troubleshooting* no longer says a missing Bedrock model access shows up as a `500`; the parser's exception is caught by the controller and returned as a `400` with `allowed: false` and the Bedrock error as `reason`. The `BlockedCommands` metric descriptions (README, `docs/user-guide.md`) now say it also counts requests that failed to parse or execute
 
 ## [0.0.1] — Initial release
 

@@ -221,18 +221,21 @@ cp src/main/resources/application-local.yml.example src/main/resources/applicati
 
 **Type:** string  
 **Default:** `jdbc:postgresql://localhost:5432/k8s_audit`  
+**Environment variable:** `SPRING_DATASOURCE_URL`  
 **Description:** JDBC URL for the local PostgreSQL database used for audit logging.
 
 ### spring.datasource.username
 
 **Type:** string  
 **Default:** `operator`  
+**Environment variable:** `SPRING_DATASOURCE_USERNAME`  
 **Description:** PostgreSQL user for the local audit database.
 
 ### spring.datasource.password
 
 **Type:** string  
 **Default:** `operator`  
+**Environment variable:** `SPRING_DATASOURCE_PASSWORD`  
 **Description:** PostgreSQL password for the local audit database.
 
 ### spring.jpa.hibernate.ddl-auto
