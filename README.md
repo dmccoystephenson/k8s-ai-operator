@@ -515,7 +515,7 @@ Raw user prompts are **never** stored.
 | Metric Name | Unit | Description |
 |---|---|---|
 | `AllowedCommands` | Count | Commands that passed the allowlist check |
-| `BlockedCommands` | Count | Commands rejected by the verb guard |
+| `BlockedCommands` | Count | Commands rejected by the verb guard, plus requests that failed to parse or execute |
 | `ExecutionLatencyMs` | Milliseconds | End-to-end latency per request |
 
 All metrics are emitted to a custom namespace, e.g. `K8sAiOperator/Execution`.
