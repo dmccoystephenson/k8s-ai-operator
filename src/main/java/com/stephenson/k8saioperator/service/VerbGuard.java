@@ -19,15 +19,17 @@ public class VerbGuard {
     public VerbGuard(
             @Value("${k8s.allowed-verbs}") String allowedVerbsCsv,
             @Value("${k8s.disallowed-verbs}") String disallowedVerbsCsv) {
-        this.allowedVerbs = Arrays.asList(allowedVerbsCsv.split(","));
-        this.disallowedVerbs = Arrays.asList(disallowedVerbsCsv.split(","));
+        this.allowedVerbs = parseVerbs(allowedVerbsCsv);
+        this.disallowedVerbs = parseVerbs(disallowedVerbsCsv);
     }
 
     /**
-     * Returns true when the verb is on the explicit allowlist.
+     * Returns true when the verb is on the explicit allowlist and not on the disallowlist.
+     * The disallowlist always wins, so a verb listed in both is rejected.
      */
     public boolean isAllowed(String verb) {
         if (verb == null) return false;
+        if (isDisallowed(verb)) return false;
         return allowedVerbs.contains(verb.trim().toLowerCase());
     }
 
@@ -42,6 +44,17 @@ public class VerbGuard {
 
     public List<String> getAllowedVerbs() {
         return allowedVerbs;
+    }
+
+    /**
+     * Splits a comma-separated verb list, trimming and lowercasing each entry
+     * and dropping blanks, so "get, Apply" matches the same verbs as "get,apply".
+     */
+    private static List<String> parseVerbs(String csv) {
+        return Arrays.stream(csv.split(","))
+                .map(v -> v.trim().toLowerCase())
+                .filter(v -> !v.isEmpty())
+                .toList();
     }
 }
 

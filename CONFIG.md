@@ -150,7 +150,7 @@ aws:
 
 **Type:** string (comma-separated list)  
 **Default:** `get,apply`  
-**Description:** Kubernetes verbs that the service will execute. Any verb produced by the model that is not in this list is rejected before execution.
+**Description:** Kubernetes verbs that the service will execute. Any verb produced by the model that is not in this list is rejected before execution. A verb that is also listed in [`k8s.disallowed-verbs`](#k8sdisallowed-verbs) is rejected. Entries are trimmed and matched case-insensitively, so `get, Apply` is the same as `get,apply`.
 
 **Example:**
 ```yaml
@@ -162,7 +162,7 @@ k8s:
 
 **Type:** string (comma-separated list)  
 **Default:** `delete,exec,scale,patch`  
-**Description:** Kubernetes verbs that are explicitly blocked. These verbs are rejected at the service layer even if the model produces them. This is a code-layer control, not a prompt-layer control.
+**Description:** Kubernetes verbs that are explicitly blocked. These verbs are rejected at the service layer even if the model produces them. This is a code-layer control, not a prompt-layer control. It takes precedence over `k8s.allowed-verbs`: a verb in both lists is rejected. Entries are trimmed and matched case-insensitively.
 
 **Example:**
 ```yaml
