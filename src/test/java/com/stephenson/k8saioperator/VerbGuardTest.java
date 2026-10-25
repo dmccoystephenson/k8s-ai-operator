@@ -75,5 +75,37 @@ class VerbGuardTest {
         assertTrue(verbGuard.isAllowed("Apply"));
         assertFalse(verbGuard.isAllowed("DELETE"));
     }
+
+    // --- Disallowlist precedence ---
+
+    @Test
+    void verbInBothLists_isBlocked() {
+        VerbGuard guard = new VerbGuard("get,delete", "delete,exec,scale,patch");
+
+        assertFalse(guard.isAllowed("delete"));
+        assertTrue(guard.isDisallowed("delete"));
+        assertTrue(guard.isAllowed("get"));
+    }
+
+    // --- Configured list normalisation ---
+
+    @Test
+    void configuredVerbs_areTrimmedAndLowercased() {
+        VerbGuard guard = new VerbGuard(" get , Apply ", "delete, EXEC");
+
+        assertTrue(guard.isAllowed("get"));
+        assertTrue(guard.isAllowed("apply"));
+        assertTrue(guard.isDisallowed("delete"));
+        assertTrue(guard.isDisallowed("exec"));
+    }
+
+    @Test
+    void blankConfiguredEntries_areIgnored() {
+        VerbGuard guard = new VerbGuard(",get,,", "delete");
+
+        assertFalse(guard.isAllowed(""));
+        assertFalse(guard.isAllowed("  "));
+        assertTrue(guard.isAllowed("get"));
+    }
 }
 
