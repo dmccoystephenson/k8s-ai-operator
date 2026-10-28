@@ -235,7 +235,7 @@ Every request (allowed and blocked) is recorded with:
 - `timestamp` — when it happened
 - `parsed_verb` / `parsed_resource` / `parsed_namespace` — what Bedrock understood
 - `allowed` — true or false
-- `block_reason` — why the request was rejected (only present when `allowed` is false)
+- `block_reason` — why the request was rejected (only set when `allowed` is false)
 - `execution_latency_ms` — how long it took
 
 > **Note:** Your raw prompt text is never stored.

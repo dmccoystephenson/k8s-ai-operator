@@ -59,7 +59,7 @@ If the prompt cannot be turned into a single command (for example, the model ret
 
 If the command was executed but the audit or metrics step then throws, the command is not reported or audited as blocked. The response keeps `allowed: true` and the command output, and `reason` carries the failure.
 
-The bundled audit and metrics implementations (DynamoDB, PostgreSQL, CloudWatch and the local no-op emitter) catch and log their own write failures, so a failed DynamoDB or PostgreSQL write or CloudWatch publish does not reach this path: the request still returns `200 OK` and the failure only appears in the application log. This response covers an exception that escapes the audit or metrics step:
+The bundled DynamoDB and PostgreSQL audit services and the CloudWatch metrics emitter catch and log their own write failures (the `local` profile's no-op metrics emitter writes nothing), so a failed DynamoDB or PostgreSQL write or CloudWatch publish does not reach this path: the request still returns `200 OK` and the failure only appears in the application log. This response covers an exception that escapes the audit or metrics step:
 ```json
 {
   "request_id": "<string>",
