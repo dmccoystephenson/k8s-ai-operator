@@ -42,7 +42,7 @@ This service exposes a single REST endpoint. "Commands" are natural-language pro
 }
 ```
 
-This response is returned for any verb that is not in `k8s.allowed-verbs`, including verbs that appear in neither the allowed nor the blocked list.
+This response is returned for any verb that is not in `k8s.allowed-verbs`, including verbs that appear in neither the allowed nor the blocked list, and for any verb in `k8s.disallowed-verbs`, even one that is also in `k8s.allowed-verbs` (the blocked list wins).
 
 **Error Response — `400 Bad Request`:**
 
@@ -57,7 +57,9 @@ If the prompt cannot be turned into a single command (for example, the model ret
 
 **Post-Execution Error Response — `500 Internal Server Error`:**
 
-If the command was executed but recording the audit record or emitting metrics then fails, the command is not reported or audited as blocked. The response keeps `allowed: true` and the command output, and `reason` carries the failure:
+If the command was executed but the audit or metrics step then throws, the command is not reported or audited as blocked. The response keeps `allowed: true` and the command output, and `reason` carries the failure.
+
+The bundled DynamoDB and PostgreSQL audit services and the CloudWatch metrics emitter catch and log their own write failures (the `local` profile's no-op metrics emitter writes nothing), so a failed DynamoDB or PostgreSQL write or CloudWatch publish does not reach this path: the request still returns `200 OK` and the failure only appears in the application log. This response covers an exception that escapes the audit or metrics step:
 ```json
 {
   "request_id": "<string>",
