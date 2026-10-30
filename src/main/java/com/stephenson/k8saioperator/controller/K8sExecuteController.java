@@ -51,9 +51,7 @@ public class K8sExecuteController {
             if (!verbGuard.isAllowed(command.getVerb())) {
                 String reason = String.format("Verb '%s' is not permitted", command.getVerb());
                 long latency = System.currentTimeMillis() - startTime;
-                auditService.recordBlocked(request.getRequestId(), command, reason, latency);
-                metricsEmitter.emitBlockedCommand();
-                metricsEmitter.emitLatency(latency);
+                recordBlocked(request.getRequestId(), command, reason, latency);
 
                 return ResponseEntity.badRequest().body(ExecuteResponse.builder()
                         .requestId(request.getRequestId())
@@ -98,15 +96,27 @@ public class K8sExecuteController {
         } catch (Exception e) {
             long latency = System.currentTimeMillis() - startTime;
             log.error("Execution failed for request_id={}: {}", request.getRequestId(), e.getMessage());
-            auditService.recordBlocked(request.getRequestId(), command, e.getMessage(), latency);
-            metricsEmitter.emitBlockedCommand();
-            metricsEmitter.emitLatency(latency);
+            recordBlocked(request.getRequestId(), command, e.getMessage(), latency);
 
             return ResponseEntity.badRequest().body(ExecuteResponse.builder()
                     .requestId(request.getRequestId())
                     .allowed(false)
                     .reason(e.getMessage())
                     .build());
+        }
+    }
+
+    /**
+     * Audits a rejected request and counts it as blocked. A failure here is logged and swallowed so that it
+     * neither re-audits the request with the recording error as its reason nor escapes as a non-ExecuteResponse 500.
+     */
+    private void recordBlocked(String requestId, ParsedCommand command, String reason, long latency) {
+        try {
+            auditService.recordBlocked(requestId, command, reason, latency);
+            metricsEmitter.emitBlockedCommand();
+            metricsEmitter.emitLatency(latency);
+        } catch (Exception e) {
+            log.error("Blocked-request audit/metrics failed for request_id={}: {}", requestId, e.getMessage());
         }
     }
 }

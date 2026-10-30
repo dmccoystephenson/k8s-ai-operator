@@ -55,6 +55,8 @@ If the prompt cannot be turned into a single command (for example, the model ret
 }
 ```
 
+For both `400` responses, an exception thrown while auditing the request as blocked or counting it in the metrics is logged and does not change the response: the `reason` stays as shown above and the request is not audited a second time.
+
 **Post-Execution Error Response — `500 Internal Server Error`:**
 
 If the command was executed but the audit or metrics step then throws, the command is not reported or audited as blocked. The response keeps `allowed: true` and the command output, and `reason` carries the failure.
