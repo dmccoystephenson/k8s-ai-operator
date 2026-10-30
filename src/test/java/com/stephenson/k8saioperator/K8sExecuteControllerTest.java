@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -34,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * - 500 shape (allowed=true, not audited as blocked) when audit/metrics fail after execution
  * - forbidden verbs never reach the K8s client and are audited as blocked
  * - 400 shape (exception message as reason, audited as blocked) when parsing or execution fails
+ * - a failing blocked-path audit/metrics call keeps the 400 shape and is not re-audited or double-counted
  */
 @WebMvcTest(K8sExecuteController.class)
 class K8sExecuteControllerTest {
@@ -300,6 +302,96 @@ class K8sExecuteControllerTest {
         verify(auditService, never()).recordAllowed(any(), any(), anyLong());
         verify(metricsEmitter).emitBlockedCommand();
         verify(metricsEmitter, never()).emitAllowedCommand();
+    }
+
+    @Test
+    void forbiddenVerb_blockedMetricFailure_keeps400Reason_andIsAuditedAndCountedOnce() throws Exception {
+        ParsedCommand deleteCommand = ParsedCommand.builder()
+                .verb("delete")
+                .resource("pods")
+                .namespace("production")
+                .build();
+
+        when(commandParser.parse(anyString())).thenReturn(deleteCommand);
+        when(verbGuard.isAllowed("delete")).thenReturn(false);
+        doThrow(new RuntimeException("sentinel-metrics-unavailable")).when(metricsEmitter).emitBlockedCommand();
+
+        String requestBody = """
+                {
+                  "request_id": "req-009",
+                  "user_prompt": "delete all pods in production"
+                }
+                """;
+
+        mockMvc.perform(post("/k8s/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.request_id").value("req-009"))
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.reason").value("Verb 'delete' is not permitted"));
+
+        verify(k8sClientAdapter, never()).execute(any());
+        verify(auditService, times(1)).recordBlocked(any(), any(), any(), anyLong());
+        verify(auditService).recordBlocked(eq("req-009"), eq(deleteCommand),
+                eq("Verb 'delete' is not permitted"), anyLong());
+        verify(metricsEmitter, times(1)).emitBlockedCommand();
+    }
+
+    @Test
+    void forbiddenVerb_blockedAuditFailure_returns400WithVerbReason() throws Exception {
+        ParsedCommand deleteCommand = ParsedCommand.builder()
+                .verb("delete")
+                .resource("pods")
+                .namespace("production")
+                .build();
+
+        when(commandParser.parse(anyString())).thenReturn(deleteCommand);
+        when(verbGuard.isAllowed("delete")).thenReturn(false);
+        doThrow(new RuntimeException("sentinel-audit-store-down"))
+                .when(auditService).recordBlocked(any(), any(), any(), anyLong());
+
+        String requestBody = """
+                {
+                  "request_id": "req-010",
+                  "user_prompt": "delete all pods in production"
+                }
+                """;
+
+        mockMvc.perform(post("/k8s/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.request_id").value("req-010"))
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.reason").value("Verb 'delete' is not permitted"));
+
+        verify(k8sClientAdapter, never()).execute(any());
+        verify(auditService, times(1)).recordBlocked(any(), any(), any(), anyLong());
+    }
+
+    @Test
+    void parserFailure_blockedAuditFailure_returns400WithParseReason() throws Exception {
+        when(commandParser.parse(anyString())).thenThrow(new RuntimeException("sentinel-parse-failure"));
+        doThrow(new RuntimeException("sentinel-audit-store-down"))
+                .when(auditService).recordBlocked(any(), any(), any(), anyLong());
+
+        String requestBody = """
+                {
+                  "request_id": "req-011",
+                  "user_prompt": "do something unparseable"
+                }
+                """;
+
+        mockMvc.perform(post("/k8s/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.request_id").value("req-011"))
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.reason").value("sentinel-parse-failure"));
+
+        verify(auditService, times(1)).recordBlocked(any(), any(), any(), anyLong());
     }
 }
 
