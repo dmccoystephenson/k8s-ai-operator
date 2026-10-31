@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - README *Security Notes* no longer claims LLM responses are schema-validated; it describes what is enforced (single JSON object + verb allowlist)
 - `docs/user-guide.md` *Troubleshooting* no longer says a missing Bedrock model access shows up as a `500`; the parser's exception is caught by the controller and returned as a `400` with `allowed: false` and the Bedrock error as `reason`. The `BlockedCommands` metric descriptions (README, `docs/user-guide.md`) now say it also counts requests that failed to parse or execute
 - `COMMANDS.md` now says the blocked `400` is also returned for a verb in `k8s.disallowed-verbs` that is also allowed, and that a failed DynamoDB/PostgreSQL write or CloudWatch publish is logged and still returns `200` (the bundled audit and metrics classes swallow their own write failures), so the `500` only covers an exception that escapes that step. `docs/user-guide.md` lists the `block_reason` audit field
+- `COMMANDS.md` *Supported Resources* now says the resource list only steers the LLM: the operator does not check `resource`, and a `get` on another resource returns `200` with `No resources found for type: <resource>`. Its `apply` example prompt now shows the resource (`apply deployments -n staging`). `CONFIG.md` notes that a verb added to `k8s.allowed-verbs` other than `get` or `apply` returns `200` with `Unrecognised verb: <verb>`
 
 ## [0.0.1] — Initial release
 

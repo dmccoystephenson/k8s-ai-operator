@@ -102,6 +102,8 @@ The following verbs are hard-blocked at the service layer and cannot be invoked 
 | `deployments` | Kubernetes Deployment resources |
 | `services` | Kubernetes Service resources |
 
+These are the resources the LLM is instructed to choose from. The operator does not check the `resource` (or `namespace`) it returns: only the verb is checked. With the current simulated Kubernetes client, a `get` on any other resource returns `200 OK` with `"result": "No resources found for type: <resource>"`, and an `apply` returns `<resource> "manifest" applied in namespace "<namespace>"` whatever the resource.
+
 ## Example Prompts
 
 | Prompt | Parsed command |
@@ -109,4 +111,4 @@ The following verbs are hard-blocked at the service layer and cannot be invoked 
 | "Show me the pods in namespace production" | `get pods -n production` |
 | "List all deployments in staging" | `get deployments -n staging` |
 | "What services are running in production?" | `get services -n production` |
-| "Apply this deployment YAML to staging" | `apply -n staging` |
+| "Apply this deployment YAML to staging" | `apply deployments -n staging` |

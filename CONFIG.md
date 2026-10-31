@@ -150,7 +150,7 @@ aws:
 
 **Type:** string (comma-separated list)  
 **Default:** `get,apply`  
-**Description:** Kubernetes verbs that the service will execute. Any verb produced by the model that is not in this list is rejected before execution. A verb that is also listed in [`k8s.disallowed-verbs`](#k8sdisallowed-verbs) is rejected. Entries are trimmed and matched case-insensitively, so `get, Apply` is the same as `get,apply`.
+**Description:** Kubernetes verbs that the service will execute. Any verb produced by the model that is not in this list is rejected before execution. A verb that is also listed in [`k8s.disallowed-verbs`](#k8sdisallowed-verbs) is rejected. Entries are trimmed and matched case-insensitively, so `get, Apply` is the same as `get,apply`. The simulated Kubernetes client only implements `get` and `apply`: any other verb added here (and not listed in `k8s.disallowed-verbs`) passes the check and returns `200 OK` with `"result": "Unrecognised verb: <verb>"` instead of running anything.
 
 **Example:**
 ```yaml
