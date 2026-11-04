@@ -95,6 +95,20 @@ class BedrockCommandParserTest {
         assertThrows(IllegalStateException.class, () -> parser.parse("anything"));
     }
 
+    @Test
+    void nonJsonModelText_failureMessageDoesNotRepeatTheModelText() {
+        // Models echo the prompt when they refuse, and this message reaches the logs and block_reason
+        String mockResponse = bedrockResponse("Sorry, I cannot delete sentinel-prompt-echo for you");
+        when(bedrockRuntimeClient.invokeModel(any(InvokeModelRequest.class)))
+                .thenReturn(invokeModelResponse(mockResponse));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("anything"));
+
+        assertFalse(ex.getMessage().contains("sentinel-prompt-echo"), ex.getMessage());
+        assertEquals("Failed to parse Bedrock response into a command: invalid JSON", ex.getMessage());
+        assertNull(ex.getCause());
+    }
+
     // --- Helpers ---
 
     private String bedrockResponse(String commandJson) {
