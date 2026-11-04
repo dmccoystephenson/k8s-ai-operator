@@ -1,5 +1,6 @@
 package com.stephenson.k8saioperator.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -167,11 +168,10 @@ public class AnthropicCommandParser implements CommandParser {
                     .namespace(commandNode.path("namespace").asText())
                     .build();
 
-        } catch (IllegalStateException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalStateException(
-                    "Failed to parse Anthropic response into a command: " + e.getMessage(), e);
+        } catch (JsonProcessingException e) {
+            // Jackson's message and exception quote the model's text, which can echo the user prompt,
+            // and this failure reaches the logs and the audit block_reason
+            throw new IllegalStateException("Failed to parse Anthropic response into a command: invalid JSON");
         }
     }
 }
