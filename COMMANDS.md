@@ -19,6 +19,8 @@ This service exposes a single REST endpoint. "Commands" are natural-language pro
 }
 ```
 
+Both fields are required. See the Invalid Request Response below.
+
 **Success Response — `200 OK`:**
 ```json
 {
@@ -57,7 +59,19 @@ If the prompt cannot be turned into a single command (for example, the model ret
 
 A reply that is not valid JSON gives the `reason` `Failed to parse Bedrock response into a command: invalid JSON` (or `Anthropic` for that provider). It does not quote the reply, because a model can repeat the prompt in it and the `reason` is also logged and stored as `block_reason`.
 
-For both `400` responses, an exception thrown while auditing the request as blocked or counting it in the metrics is logged and does not change the response: the `reason` stays as shown above and the request is not audited a second time.
+For the Blocked and Error responses, an exception thrown while auditing the request as blocked or counting it in the metrics is logged and does not change the response: the `reason` stays as shown above and the request is not audited a second time.
+
+**Invalid Request Response — `400 Bad Request`:**
+
+A missing or blank `request_id` or `user_prompt` is rejected before the prompt is sent to the LLM. If both are missing, the `reason` names `request_id`. `request_id` is left out of the response if it was not sent:
+```json
+{
+  "allowed": false,
+  "reason": "request_id is required"
+}
+```
+
+The `reason` for the other field is `user_prompt is required`. Nothing is executed, and the request is logged but neither audited nor counted in `BlockedCommands`: a request with no `request_id` has no key to audit it under.
 
 **Post-Execution Error Response — `500 Internal Server Error`:**
 

@@ -25,6 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
  * 3. Execute against the K8s client
  * 4. Persist audit record
  * 5. Emit metrics
+ *
+ * A missing or blank request_id or user_prompt is rejected with a 400 before step 1. No audit record can be keyed
+ * without a request_id, so such a request is neither audited nor counted as blocked.
  */
 @Slf4j
 @RestController
@@ -40,6 +43,18 @@ public class K8sExecuteController {
 
     @PostMapping("/execute")
     public ResponseEntity<ExecuteResponse> execute(@RequestBody ExecuteRequest request) {
+        String missingField = findMissingField(request);
+        if (missingField != null) {
+            String reason = missingField + " is required";
+            log.warn("Rejected request_id={}: {}", request.getRequestId(), reason);
+
+            return ResponseEntity.badRequest().body(ExecuteResponse.builder()
+                    .requestId(request.getRequestId())
+                    .allowed(false)
+                    .reason(reason)
+                    .build());
+        }
+
         long startTime = System.currentTimeMillis();
 
         ParsedCommand command = null;
@@ -104,6 +119,17 @@ public class K8sExecuteController {
                     .reason(e.getMessage())
                     .build());
         }
+    }
+
+    private String findMissingField(ExecuteRequest request) {
+        if (isBlank(request.getRequestId())) {
+            return "request_id";
+        }
+        return isBlank(request.getUserPrompt()) ? "user_prompt" : null;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     /**

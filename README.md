@@ -75,7 +75,7 @@ If you see `BUILD SUCCESS`, the tests have passed.
 Key test cases:
 
 - `VerbGuardTest` — verifies `delete`, `exec`, `scale`, `patch` are blocked unconditionally, that the disallowlist wins over the allowlist, and that configured verbs are trimmed and lowercased
-- `K8sExecuteControllerTest` — validates `400` response shape for forbidden intents, `200` shape for allowed ones, `500` shape (still `allowed: true`) when audit or metrics fail after execution, that forbidden verbs never reach the K8s client, the `400` shape (exception message as `reason`, audited as blocked) when parsing or execution fails, and that a failing blocked-path audit or metrics call keeps the `400` shape and original `reason` without re-auditing or double-counting
+- `K8sExecuteControllerTest` — validates `400` response shape for forbidden intents, `200` shape for allowed ones, `500` shape (still `allowed: true`) when audit or metrics fail after execution, that forbidden verbs never reach the K8s client, the `400` shape (exception message as `reason`, audited as blocked) when parsing or execution fails, that a failing blocked-path audit or metrics call keeps the `400` shape and original `reason` without re-auditing or double-counting, and that a missing or blank `request_id` or `user_prompt` gets a `400` before anything else runs
 - `BedrockCommandParserTest` — mocks Bedrock responses and asserts parsed command structure, and that a non-JSON reply's text stays out of the failure message
 - `AnthropicCommandParserTest` — mocks Anthropic API responses and asserts parsed command structure, and that a non-JSON reply's text stays out of the failure message
 - `PostgresAuditServiceTest` — verifies audit records for allowed and blocked commands (local profile)
@@ -459,6 +459,15 @@ This project is in active development.
       "reason": "Verb 'delete' is not permitted"
     }
 
+**Invalid Request Response — `400 Bad Request`**
+
+Both request fields are required. A missing or blank field is rejected before the prompt reaches the LLM, and the request is neither audited nor counted as blocked.
+
+    {
+      "allowed": false,
+      "reason": "request_id is required"
+    }
+
 ---
 
 ## Command Model
@@ -489,7 +498,7 @@ Disallowed verbs are rejected **after** parsing and **before** execution, even i
 - **Max 1 command per request** — multi-command responses from the model are rejected
 - **Max token cap** — enforced on the LLM call (`aws.bedrock.max-tokens` / `anthropic.max-tokens`)
 - **No raw prompt logging** — user prompts are never written to CloudWatch Logs or DynamoDB
-- **Full audit record** on every request (allowed or blocked)
+- **Full audit record** on every request with a `request_id` and `user_prompt` (allowed or blocked)
 
 ---
 

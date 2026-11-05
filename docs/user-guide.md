@@ -230,7 +230,7 @@ kubectl logs -f deployment/k8s-ai-operator -n k8s-ai-operator
 ### Audit records in DynamoDB
 In the AWS Console → DynamoDB → Tables → `K8sAgentExecutions` → Explore items.
 
-Every request (allowed and blocked) is recorded with:
+Every request with a `request_id` and `user_prompt` (allowed and blocked) is recorded with:
 - `request_id` — the ID you sent
 - `timestamp` — when it happened
 - `parsed_verb` / `parsed_resource` / `parsed_namespace` — what Bedrock understood
