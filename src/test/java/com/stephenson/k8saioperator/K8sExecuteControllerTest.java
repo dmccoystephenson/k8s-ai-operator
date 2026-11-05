@@ -24,6 +24,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -36,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * - forbidden verbs never reach the K8s client and are audited as blocked
  * - 400 shape (exception message as reason, audited as blocked) when parsing or execution fails
  * - a failing blocked-path audit/metrics call keeps the 400 shape and is not re-audited or double-counted
+ * - 400 shape for a missing or blank request_id or user_prompt, rejected before anything else runs
  */
 @WebMvcTest(K8sExecuteController.class)
 class K8sExecuteControllerTest {
@@ -392,6 +394,101 @@ class K8sExecuteControllerTest {
                 .andExpect(jsonPath("$.reason").value("sentinel-parse-failure"));
 
         verify(auditService, times(1)).recordBlocked(any(), any(), any(), anyLong());
+    }
+
+    // --- Required fields ---
+
+    @Test
+    void missingRequestId_returns400_andIsRejectedBeforeParsing() throws Exception {
+        String requestBody = """
+                {
+                  "user_prompt": "show me the pods"
+                }
+                """;
+
+        mockMvc.perform(post("/k8s/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.request_id").doesNotExist())
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.reason").value("request_id is required"));
+
+        verifyRejectedBeforeParsing();
+    }
+
+    @Test
+    void blankRequestId_returns400_andIsRejectedBeforeParsing() throws Exception {
+        String requestBody = """
+                {
+                  "request_id": "   ",
+                  "user_prompt": "show me the pods"
+                }
+                """;
+
+        mockMvc.perform(post("/k8s/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.reason").value("request_id is required"));
+
+        verifyRejectedBeforeParsing();
+    }
+
+    @Test
+    void missingUserPrompt_returns400WithRequestId_andIsRejectedBeforeParsing() throws Exception {
+        String requestBody = """
+                {
+                  "request_id": "req-012"
+                }
+                """;
+
+        mockMvc.perform(post("/k8s/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.request_id").value("req-012"))
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.reason").value("user_prompt is required"));
+
+        verifyRejectedBeforeParsing();
+    }
+
+    @Test
+    void blankUserPrompt_returns400WithRequestId_andIsRejectedBeforeParsing() throws Exception {
+        String requestBody = """
+                {
+                  "request_id": "req-013",
+                  "user_prompt": "   "
+                }
+                """;
+
+        mockMvc.perform(post("/k8s/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.request_id").value("req-013"))
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.reason").value("user_prompt is required"));
+
+        verifyRejectedBeforeParsing();
+    }
+
+    @Test
+    void bothFieldsMissing_reportsRequestIdFirst() throws Exception {
+        mockMvc.perform(post("/k8s/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.reason").value("request_id is required"));
+
+        verifyRejectedBeforeParsing();
+    }
+
+    private void verifyRejectedBeforeParsing() {
+        verifyNoInteractions(commandParser, verbGuard, k8sClientAdapter, auditService, metricsEmitter);
     }
 }
 
