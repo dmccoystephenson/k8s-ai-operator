@@ -12,7 +12,7 @@ Once deployed, the application is fully wired to live AWS services on every requ
 |---|---|---|
 | **Amazon Bedrock (Claude)** | Translates the natural-language prompt into a structured kubectl command | EKS node IAM role |
 | **K8sClientAdapter (mock)** | Executes the parsed command and returns simulated cluster output | n/a (in-process) |
-| **Amazon DynamoDB** | Writes an audit record for every request — allowed and blocked | EKS node IAM role |
+| **Amazon DynamoDB** | Writes an audit record for every request with a `request_id` and `user_prompt` — allowed and blocked | EKS node IAM role |
 | **Amazon CloudWatch** | Emits `AllowedCommands`, `BlockedCommands`, and `ExecutionLatencyMs` metrics | EKS node IAM role |
 
 The IAM policies (`AmazonBedrockFullAccess`, `AmazonDynamoDBFullAccess`, `CloudWatchFullAccess`) are attached to the EKS node role automatically by `deploy.sh` — no credentials need to be configured manually in the app.
@@ -85,7 +85,7 @@ aws dynamodb create-table \
   --billing-mode PAY_PER_REQUEST \
   --region us-east-2
 ```
-The app writes an audit record to this table for every request (allowed and blocked). **Idempotent** — skipped if the table already exists.
+The app writes an audit record to this table for every request with a `request_id` and `user_prompt` (allowed and blocked). **Idempotent** — skipped if the table already exists.
 
 ---
 
