@@ -24,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - A model reply that is not valid JSON no longer puts the reply's text into the failure `reason`, the application log or the audit `block_reason`. A refusal can repeat the prompt, and Jackson's error message quoted the whole reply. The `reason` is now `Failed to parse Bedrock response into a command: invalid JSON` (or `Anthropic`), and the exception no longer keeps the Jackson error as its cause
 - `POST /k8s/execute` now rejects a missing or blank `request_id` or `user_prompt` with a `400` (`allowed: false`, `reason: "<field> is required"`) before the LLM is called. A request with no `request_id` could previously run a command and return `200` with no audit record. A rejected request is logged, but neither audited nor counted in `BlockedCommands`
 - A model reply with more than one text block, or with anything after the JSON object, is now rejected with a `400`. The parsers previously read the first command and dropped the rest, so the second command never reached the verb check or the audit record. This also rejects prose after the object, which was previously ignored
-- `ExecuteRequest.toString()` no longer includes the user prompt, so printing a request, for example through Spring's `DEBUG` logging, cannot write the prompt to a log
+- `ExecuteRequest.toString()` no longer includes the user prompt, so anything that prints a request, such as Spring's `DEBUG` logging, leaves the prompt out
 
 ## [0.0.1] — Initial release
 
