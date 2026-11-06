@@ -136,6 +136,47 @@ class AnthropicCommandParserTest {
         assertNull(ex.getCause());
     }
 
+    @Test
+    void twoTextBlocks_areRejectedAsMultipleCommands() throws Exception {
+        stubHttpResponse(200, "{\"id\":\"msg_001\",\"content\":["
+                + "{\"type\":\"text\",\"text\":\"{}\"},"
+                + "{\"type\":\"text\",\"text\":\"{}\"}"
+                + "],\"stop_reason\":\"end_turn\"}");
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("do two things"));
+
+        assertEquals("Model returned multiple commands — only one command per request is permitted", ex.getMessage());
+    }
+
+    @Test
+    void twoObjectsInOneTextBlock_areRejected() throws Exception {
+        stubHttpResponse(200, anthropicResponse("{\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"} "
+                + "{\"verb\":\"delete\",\"resource\":\"pods\",\"namespace\":\"default\"}"));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("do two things"));
+
+        assertEquals("Failed to parse Anthropic response into a command: invalid JSON", ex.getMessage());
+    }
+
+    @Test
+    void textAfterTheObject_isRejectedWithoutRepeatingIt() throws Exception {
+        stubHttpResponse(200, anthropicResponse(
+                "{\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"} sentinel-prompt-echo"));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("anything"));
+
+        assertEquals("Failed to parse Anthropic response into a command: invalid JSON", ex.getMessage());
+        assertNull(ex.getCause());
+    }
+
+    @Test
+    void fencedObject_isStillParsed() throws Exception {
+        stubHttpResponse(200, anthropicResponse(
+                "```json {\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"} ```"));
+
+        assertEquals("get", parser.parse("show the pods").getVerb());
+    }
+
     // --- Helpers ---
 
     @SuppressWarnings("unchecked")

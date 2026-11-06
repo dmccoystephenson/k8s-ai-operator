@@ -109,6 +109,55 @@ class BedrockCommandParserTest {
         assertNull(ex.getCause());
     }
 
+    @Test
+    void twoTextBlocks_areRejectedAsMultipleCommands() {
+        String mockResponse = "{\"id\":\"msg_001\",\"content\":["
+                + "{\"type\":\"text\",\"text\":\"{}\"},"
+                + "{\"type\":\"text\",\"text\":\"{}\"}"
+                + "],\"stop_reason\":\"end_turn\"}";
+        when(bedrockRuntimeClient.invokeModel(any(InvokeModelRequest.class)))
+                .thenReturn(invokeModelResponse(mockResponse));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("do two things"));
+
+        assertEquals("Model returned multiple commands — only one command per request is permitted", ex.getMessage());
+    }
+
+    @Test
+    void twoObjectsInOneTextBlock_areRejected() {
+        String mockResponse = bedrockResponse("{\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"} "
+                + "{\"verb\":\"delete\",\"resource\":\"pods\",\"namespace\":\"default\"}");
+        when(bedrockRuntimeClient.invokeModel(any(InvokeModelRequest.class)))
+                .thenReturn(invokeModelResponse(mockResponse));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("do two things"));
+
+        assertEquals("Failed to parse Bedrock response into a command: invalid JSON", ex.getMessage());
+    }
+
+    @Test
+    void textAfterTheObject_isRejectedWithoutRepeatingIt() {
+        String mockResponse = bedrockResponse(
+                "{\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"} sentinel-prompt-echo");
+        when(bedrockRuntimeClient.invokeModel(any(InvokeModelRequest.class)))
+                .thenReturn(invokeModelResponse(mockResponse));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("anything"));
+
+        assertEquals("Failed to parse Bedrock response into a command: invalid JSON", ex.getMessage());
+        assertNull(ex.getCause());
+    }
+
+    @Test
+    void fencedObject_isStillParsed() {
+        String mockResponse = bedrockResponse(
+                "```json {\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"} ```");
+        when(bedrockRuntimeClient.invokeModel(any(InvokeModelRequest.class)))
+                .thenReturn(invokeModelResponse(mockResponse));
+
+        assertEquals("get", parser.parse("show the pods").getVerb());
+    }
+
     // --- Helpers ---
 
     private String bedrockResponse(String commandJson) {
