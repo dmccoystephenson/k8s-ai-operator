@@ -57,7 +57,9 @@ If the prompt cannot be turned into a single command (for example, the model ret
 }
 ```
 
-A reply that is not valid JSON gives the `reason` `Failed to parse Bedrock response into a command: invalid JSON` (or `Anthropic` for that provider). It does not quote the reply, because a model can repeat the prompt in it and the `reason` is also logged and stored as `block_reason`.
+The multi-command `reason` above is given for a reply that is a JSON array or that has more than one text block.
+
+A reply that is not valid JSON gives the `reason` `Failed to parse Bedrock response into a command: invalid JSON` (or `Anthropic` for that provider). So does any text after the JSON object, including a second object. The `reason` does not quote the reply, because a model can repeat the prompt in it and the `reason` is also logged and stored as `block_reason`.
 
 For the Blocked and Error responses, an exception thrown while auditing the request as blocked or counting it in the metrics is logged and does not change the response: the `reason` stays as shown above and the request is not audited a second time.
 
