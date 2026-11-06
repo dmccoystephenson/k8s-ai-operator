@@ -76,8 +76,9 @@ Key test cases:
 
 - `VerbGuardTest` — verifies `delete`, `exec`, `scale`, `patch` are blocked unconditionally, that the disallowlist wins over the allowlist, and that configured verbs are trimmed and lowercased
 - `K8sExecuteControllerTest` — validates `400` response shape for forbidden intents, `200` shape for allowed ones, `500` shape (still `allowed: true`) when audit or metrics fail after execution, that forbidden verbs never reach the K8s client, the `400` shape (exception message as `reason`, audited as blocked) when parsing or execution fails, that a failing blocked-path audit or metrics call keeps the `400` shape and original `reason` without re-auditing or double-counting, and that a missing or blank `request_id` or `user_prompt` gets a `400` before anything else runs
-- `BedrockCommandParserTest` — mocks Bedrock responses and asserts parsed command structure, and that a non-JSON reply's text stays out of the failure message
-- `AnthropicCommandParserTest` — mocks Anthropic API responses and asserts parsed command structure, and that a non-JSON reply's text stays out of the failure message
+- `BedrockCommandParserTest` — mocks Bedrock responses and asserts parsed command structure, that multi-command replies (an array, two text blocks, or text after the object) are rejected, and that a non-JSON reply's text stays out of the failure message
+- `AnthropicCommandParserTest` — mocks Anthropic API responses and asserts parsed command structure, that multi-command replies (an array, two text blocks, or text after the object) are rejected, and that a non-JSON reply's text stays out of the failure message
+- `ExecuteRequestTest` — verifies that `toString()` leaves out the user prompt
 - `PostgresAuditServiceTest` — verifies audit records for allowed and blocked commands (local profile)
 - `DynamoDbAuditServiceTest` — verifies the DynamoDB audit item for allowed and blocked commands, omission of absent fields, and that write failures are swallowed
 - `CloudWatchMetricsEmitterTest` — verifies the CloudWatch metric name, value, unit, namespace and `Service` dimension for each metric, and that publish failures are swallowed

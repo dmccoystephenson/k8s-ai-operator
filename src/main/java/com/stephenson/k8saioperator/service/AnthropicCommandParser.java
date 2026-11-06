@@ -1,6 +1,7 @@
 package com.stephenson.k8saioperator.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -148,6 +149,11 @@ public class AnthropicCommandParser implements CommandParser {
                 throw new IllegalStateException("No text content block in Anthropic response");
             }
 
+            if (textBlocks.size() > 1) {
+                throw new IllegalStateException(
+                        "Model returned multiple commands — only one command per request is permitted");
+            }
+
             String jsonText = textBlocks.get(0).path("text").asText().trim();
 
             // Strip any accidental markdown fencing
@@ -155,7 +161,10 @@ public class AnthropicCommandParser implements CommandParser {
                 jsonText = jsonText.replaceAll("^```[a-z]*\\n?", "").replaceAll("```$", "").trim();
             }
 
-            JsonNode commandNode = objectMapper.readTree(jsonText);
+            // Without this feature readTree stops after the first value, so a second command would be dropped unseen
+            JsonNode commandNode = objectMapper.reader()
+                    .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                    .readTree(jsonText);
 
             if (commandNode.isArray()) {
                 throw new IllegalStateException(
