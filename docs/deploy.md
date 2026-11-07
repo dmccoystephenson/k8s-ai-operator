@@ -28,7 +28,7 @@ The IAM policies (`AmazonBedrockFullAccess`, `AmazonDynamoDBFullAccess`, `CloudW
 | AWS CLI v2 | `aws --version` | Must be configured with your IAM identity |
 | Java 21 | `java -version` | Needed by the Maven wrapper to build the JAR |
 | Docker | `docker --version` | **Auto-installed by `deploy.sh`** if missing |
-| kubectl | `kubectl version --client` | Installed by `setup-eks.sh` |
+| kubectl | `kubectl version --client` | `setup-eks.sh` installs it only on the machine that runs that script, so install it yourself on the EC2 instance |
 | Maven wrapper | `./mvnw --version` | Included in the repo |
 | jq | `jq --version` | Used to pretty-print test output |
 
