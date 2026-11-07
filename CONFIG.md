@@ -177,14 +177,14 @@ k8s:
 **Type:** boolean  
 **Default:** `true`  
 **Environment variable:** `USAGE_REPORTING_ENABLED` (Helm: `usageReporting.enabled`)  
-**Description:** Whether the operator sends one `startup` event (program name, version and the tag `service=true`) to the trace usage-tracking service when it starts. Nothing is sent per request, and nothing about prompts, commands, clusters, users or hosts. `TRACE_USAGE_REPORTING=off` or `DO_NOT_TRACK=1` in the environment also turn it off and win over this setting. See [Usage reporting](README.md#usage-reporting).
+**Description:** Whether the operator sends one `startup` event (program name, version, the tag `service=true` and a random installation ID as the tag `install`) to the trace usage-tracking service when it starts. Nothing is sent per request, and nothing about prompts, commands, clusters, users or hosts. `TRACE_USAGE_REPORTING=off` or `DO_NOT_TRACK=1` in the environment also turn it off and win over this setting. See [Usage reporting](README.md#usage-reporting).
 
 ## usage-reporting.endpoint
 
 **Type:** string  
 **Default:** `https://trace.danielstephenson.dev`  
 **Environment variable:** `USAGE_REPORTING_ENDPOINT`  
-**Description:** The trace service the startup event is sent to.
+**Description:** The trace service the startup event is sent to. An endpoint that cannot be used turns reporting off and logs a warning; it does not stop the application from starting.
 
 ## usage-reporting.key
 
@@ -197,7 +197,7 @@ k8s:
 
 **Type:** string  
 **Default:** the Maven project version (`@project.version@`, filled in at build time)  
-**Description:** The version tag sent with the startup event. This is not meant to be set by hand. If the placeholder was not filled in, the jar manifest's `Implementation-Version` is used instead; if neither is available, the event is sent without a version tag.
+**Description:** The version tag sent with the startup event. This is not meant to be set by hand. If the placeholder was not filled in, the jar manifest's `Implementation-Version` is used instead; if neither is available, the version is sent as `unknown`.
 
 ## Local Profile (`application-local.yml`)
 
@@ -238,11 +238,29 @@ cp src/main/resources/application-local.yml.example src/main/resources/applicati
 **Environment variable:** `SPRING_DATASOURCE_PASSWORD`  
 **Description:** PostgreSQL password for the local audit database.
 
+### spring.datasource.driver-class-name
+
+**Type:** string  
+**Default:** `org.postgresql.Driver`  
+**Description:** JDBC driver class for the local audit database.
+
 ### spring.jpa.hibernate.ddl-auto
 
 **Type:** string  
 **Default:** `update`  
 **Description:** Hibernate schema management strategy. `update` creates or updates the `audit_records` table automatically on startup.
+
+### spring.jpa.database-platform
+
+**Type:** string  
+**Default:** `org.hibernate.dialect.PostgreSQLDialect`  
+**Description:** Hibernate dialect for the local audit database.
+
+### spring.jpa.show-sql
+
+**Type:** boolean  
+**Default:** `false`  
+**Description:** Whether Hibernate prints the SQL it runs.
 
 ### llm.provider (local profile override)
 
