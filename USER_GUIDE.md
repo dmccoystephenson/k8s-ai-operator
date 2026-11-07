@@ -1,6 +1,6 @@
 # User Guide — k8s-ai-operator
 
-> For a full step-by-step deployment walkthrough, see [docs/user-guide.md](docs/user-guide.md).
+> For a full step-by-step deployment walkthrough, see [docs/user-guide.md](docs/user-guide.md). It uses the deprecated setup and deploy scripts; the recommended workflow is Terraform and Helm, described in the [README](README.md#aws-deployment).
 
 ## Prerequisites
 

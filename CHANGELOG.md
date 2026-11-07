@@ -25,6 +25,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `POST /k8s/execute` now rejects a missing or blank `request_id` or `user_prompt` with a `400` (`allowed: false`, `reason: "<field> is required"`) before the LLM is called. A request with no `request_id` could previously run a command and return `200` with no audit record. A rejected request is logged, but neither audited nor counted in `BlockedCommands`
 - A model reply with more than one text block, or with anything after the JSON object, is now rejected with a `400`. The parsers previously read the first command and dropped the rest, so the second command never reached the verb check or the audit record. This also rejects prose after the object, which was previously ignored
 - `ExecuteRequest.toString()` no longer includes the user prompt, so anything that prints a request, such as Spring's `DEBUG` logging, leaves the prompt out
+- `docs/ec2-setup.md` now uses `us-east-2`, the region `setup-ec2.sh` actually provisions in, instead of `us-east-1`. Its `nohup` command now passes `--aws.region`, without which the application would use the `us-east-1` default
+- `docs/deploy.md`, `docs/ec2-setup.md`, `docs/eks-setup.md`, `docs/user-guide.md` and `USER_GUIDE.md` now say that the setup and deploy scripts are deprecated in favour of Terraform and Helm
+- `docs/deploy.md` *Step 6* now rewrites the image placeholder, which the previous command left in place, and notes the `deploy.sh` image path bug (#45). It also lists the Java 21 prerequisite
+- `docs/eks-setup.md` now says `setup-eks.sh` installs a missing `eksctl` or `kubectl` instead of exiting, and no longer implies the operator talks to the sample cluster. `docs/user-guide.md` now says the Kubernetes client is simulated, lists what `deploy.sh` needs on the EC2 instance, and deletes the key pair during teardown
+- `CONFIG.md` now documents the `install` tag, the unusable-endpoint behaviour and the three local-profile keys it was missing, and says a missing version is sent as `unknown`. `COMMANDS.md` now covers the `400` and `415` that Spring returns for an unreadable body or a non-JSON `Content-Type`
 
 ## [0.0.1] — Initial release
 

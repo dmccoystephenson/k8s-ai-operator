@@ -1,5 +1,7 @@
 # Deployment Guide — k8s-ai-operator
 
+> ⚠️ **Deprecated** — `deploy.sh` is no longer the recommended way to deploy. Use the Terraform and Helm workflow in the [README](../README.md#aws-deployment) instead.
+
 > **Assumes:** `setup-ec2.sh` and `setup-eks.sh` have both been run successfully.
 
 ---
@@ -24,6 +26,7 @@ The IAM policies (`AmazonBedrockFullAccess`, `AmazonDynamoDBFullAccess`, `CloudW
 | Tool | Check | Notes |
 |---|---|---|
 | AWS CLI v2 | `aws --version` | Must be configured with your IAM identity |
+| Java 21 | `java -version` | Needed by the Maven wrapper to build the JAR |
 | Docker | `docker --version` | **Auto-installed by `deploy.sh`** if missing |
 | kubectl | `kubectl version --client` | Installed by `setup-eks.sh` |
 | Maven wrapper | `./mvnw --version` | Included in the repo |
@@ -54,7 +57,8 @@ Compiles the Spring Boot app and produces a JAR under `target/k8s-ai-operator-*.
 
 ### Step 2 — Create ECR Repository
 ```bash
-aws ecr create-repository --repository-name k8s-ai-operator --region us-east-2
+aws ecr create-repository --repository-name k8s-ai-operator --region us-east-2 \
+  --image-scanning-configuration scanOnPush=true
 ```
 Creates a private container registry in your AWS account. **Idempotent** — skipped if it already exists.
 
@@ -101,9 +105,14 @@ The app needs three AWS services at runtime. The script attaches these managed p
 ---
 
 ### Step 6 — Deploy to EKS
+
+The manifest's image is a placeholder (`ACCOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/k8s-ai-operator:latest`), so it has to be rewritten before it is applied. To run this step by hand, substitute your account ID:
 ```bash
-kubectl apply -f k8s-operator-manifest.yaml
+aws eks update-kubeconfig --name k8s-ai-operator-test --region us-east-2
+sed "s|ACCOUNT_ID|<ACCOUNT_ID>|g" k8s-operator-manifest.yaml | kubectl apply -f -
 ```
+
+> **Known issue:** the `sed` command in `deploy.sh` itself writes a doubled repository path, so the pod cannot pull the image ([#45](https://github.com/dmccoystephenson/k8s-ai-operator/issues/45)). The command above does not have this problem.
 
 The manifest (`k8s-operator-manifest.yaml`) creates:
 - A dedicated `k8s-ai-operator` **namespace**

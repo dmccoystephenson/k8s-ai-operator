@@ -1,5 +1,7 @@
 # User Guide — k8s-ai-operator
 
+> ⚠️ **Deprecated** — this walkthrough uses `setup-ec2.sh`, `setup-eks.sh` and `deploy.sh`, which are no longer the recommended way to deploy. Use the Terraform and Helm workflow in the [README](../README.md#aws-deployment) instead.
+
 This guide walks you through everything from zero to a running deployment. No prior Kubernetes or AWS experience assumed.
 
 ---
@@ -11,7 +13,7 @@ This guide walks you through everything from zero to a running deployment. No pr
 Under the hood it:
 1. Sends your sentence to **AWS Bedrock (Claude)** to interpret it
 2. Checks the command against a **safety allowlist** (only `get` and `apply` are permitted)
-3. Runs the command against the cluster
+3. Runs the command against a simulated cluster: the current Kubernetes client (`K8sClientAdapter`) is a mock, so it returns sample output and changes nothing on a real cluster
 4. Logs everything to **DynamoDB** and emits metrics to **CloudWatch**
 
 ---
@@ -73,6 +75,8 @@ chmod +x setup-eks.sh
 > ```
 > This is normal — AWS is building the full cluster infrastructure. **Just let it run.**
 
+The script installs `eksctl` and `kubectl` if they are missing, using the Linux amd64 binaries and `sudo`. On any other platform, install them yourself first.
+
 When done you'll see:
 ```
 Cluster ready — context set to: <context-name>
@@ -106,7 +110,12 @@ scp -i k8s-agent-key.pem -r \
 ```
 
 ### 3c — Run the deploy script on EC2
-Back in your SSH session:
+`setup-ec2.sh` installs nothing on the instance and does not attach an IAM role, so `deploy.sh` needs these first:
+- The AWS CLI, configured with your credentials (`aws configure`)
+- `kubectl`
+- Java 21: `sudo apt-get install -y openjdk-21-jdk`
+
+Then, back in your SSH session:
 ```bash
 cd ~/k8s-ai-operator
 chmod +x deploy.sh
@@ -255,7 +264,7 @@ Available metrics:
 | Problem | What to check |
 |---|---|
 | `deploy.sh` fails at the JAR build step | Make sure Java 21 is installed on EC2: `java -version`. Install with `sudo apt-get install -y openjdk-21-jdk` |
-| Pod stuck in `ImagePullBackOff` | ECR auth issue — re-run `deploy.sh`, it will re-authenticate |
+| Pod stuck in `ImagePullBackOff` | Run `kubectl describe pod -n k8s-ai-operator` and check the image. If the path repeats `k8s-ai-operator/k8s-ai-operator`, it is a known `deploy.sh` bug ([#45](https://github.com/dmccoystephenson/k8s-ai-operator/issues/45)): apply the manifest by hand as shown in [Step 6 of the deployment guide](deploy.md#step-6--deploy-to-eks). Otherwise it is an ECR auth issue — re-run `deploy.sh`, it will re-authenticate |
 | Pod stuck in `CrashLoopBackOff` | Check logs: `kubectl logs deployment/k8s-ai-operator -n k8s-ai-operator` |
 | `400` with `"allowed": false` on every request, and a `reason` that is a Bedrock error rather than `Verb '<verb>' is not permitted` | Bedrock model access not enabled — check the AWS Console → Bedrock → Model access |
 | LoadBalancer hostname never appears | Run `kubectl get svc -n k8s-ai-operator` and wait a few more minutes |
@@ -280,6 +289,7 @@ source .k8s-agent-state
 aws ec2 terminate-instances --instance-ids "$INSTANCE_ID" --region "$REGION"
 aws ec2 wait instance-terminated --instance-ids "$INSTANCE_ID" --region "$REGION"
 aws ec2 delete-security-group --group-id "$SG_ID" --region "$REGION"
+aws ec2 delete-key-pair --key-name k8s-agent-key --region "$REGION"
 
 # 4. Delete AWS resources
 aws dynamodb delete-table --table-name K8sAgentExecutions --region us-east-2

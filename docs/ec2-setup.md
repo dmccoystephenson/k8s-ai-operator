@@ -1,6 +1,8 @@
 # EC2 Provisioning Guide — k8s-ai-operator
 
-This guide walks through spinning up an EC2 instance in `us-east-1` and deploying the k8s-ai-operator Spring Boot application on it.
+> ⚠️ **Deprecated** — `setup-ec2.sh` is no longer the recommended way to provision infrastructure. Use the Terraform and Helm workflow in the [README](../README.md#aws-deployment) instead.
+
+This guide walks through spinning up an EC2 instance in `us-east-2` and deploying the k8s-ai-operator Spring Boot application on it.
 
 ---
 
@@ -29,7 +31,7 @@ The script performs the following actions in order:
 | Verify credentials | Calls `aws sts get-caller-identity` to confirm the active IAM identity |
 | Create key pair | Generates `k8s-agent-key.pem` locally with `chmod 400` applied |
 | Create security group | Creates `k8s-agent-sg` and opens port 22 (SSH, your IP only) and port 8080 (HTTP, world) |
-| Resolve AMI | Queries the Canonical owner account for the latest Ubuntu 22.04 LTS HVM AMI in `us-east-1` |
+| Resolve AMI | Queries the Canonical owner account for the latest Ubuntu 22.04 LTS HVM AMI in `us-east-2` |
 | Launch instance | Starts a `t3.small` instance tagged `Name=k8s-agent` |
 | Wait for running state | Blocks until the instance passes the `instance-running` check |
 | Save state | Writes `INSTANCE_ID`, `SG_ID`, `REGION`, and `PUBLIC_IP` to `.k8s-agent-state` |
@@ -45,9 +47,13 @@ Instance ready — ssh -i k8s-agent-key.pem ubuntu@<PUBLIC_IP>
 ```bash
 #!/usr/bin/env bash
 # setup-ec2.sh — Provision EC2 instance for k8s-ai-operator
+#
+# DEPRECATED: This script is no longer the recommended way to provision
+# infrastructure for k8s-ai-operator.  Use the Terraform configuration in
+# infra/terraform/ instead.  See README.md for the updated workflow.
 set -euo pipefail
 
-REGION="us-east-1"
+REGION="us-east-2"
 KEY_NAME="k8s-agent-key"
 SG_NAME="k8s-agent-sg"
 
@@ -194,7 +200,7 @@ If an instance profile is not available, you can export credentials manually on 
 ```bash
 export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...
-export AWS_DEFAULT_REGION=us-east-1
+export AWS_DEFAULT_REGION=us-east-2
 ```
 
 ---
@@ -206,7 +212,7 @@ On the instance:
 ```bash
 java -jar ~/app.jar \
   --server.port=8080 \
-  --aws.region=us-east-1
+  --aws.region=us-east-2
 ```
 
 The service will be reachable at:
@@ -218,7 +224,7 @@ http://<PUBLIC_IP>:8080/k8s/execute
 To keep it running after your SSH session ends, use `nohup` or `screen`:
 
 ```bash
-nohup java -jar ~/app.jar --server.port=8080 > ~/app.log 2>&1 &
+nohup java -jar ~/app.jar --server.port=8080 --aws.region=us-east-2 > ~/app.log 2>&1 &
 echo $! > ~/app.pid
 ```
 
@@ -287,10 +293,10 @@ rm -f k8s-agent-key.pem .k8s-agent-state
   ```bash
   NEW_IP=$(curl -s https://checkip.amazonaws.com)
   aws ec2 authorize-security-group-ingress \
-    --group-id "$SG_ID" --region us-east-1 \
+    --group-id "$SG_ID" --region us-east-2 \
     --protocol tcp --port 22 --cidr "${NEW_IP}/32"
   ```
-- The `.pem` key file grants full SSH access — keep it out of version control (add `*.pem` to `.gitignore`).
-- The `.k8s-agent-state` file contains the public IP and instance ID — also keep it out of version control.
+- The `.pem` key file grants full SSH access — keep it out of version control (`*.pem` is already in `.gitignore`).
+- The `.k8s-agent-state` file contains the public IP and instance ID — also keep it out of version control (it is already in `.gitignore`).
 - For production workloads, place the instance in a VPC private subnet behind a load balancer and remove the direct public-IP exposure.
 

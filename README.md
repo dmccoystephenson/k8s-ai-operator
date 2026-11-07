@@ -143,7 +143,7 @@ The `local` profile activates:
 - **NoOpMetricsEmitter** — logs metrics at DEBUG level instead of sending them to CloudWatch
 - **K8sClientAdapter** — returns simulated kubectl output (mock client); no live cluster is required to exercise the API
 
-No AWS credentials are required when running with `-Dspring.profiles.active=local`.
+No AWS credentials are required when running with the `local` profile.
 
 ### AWS Deployment
 

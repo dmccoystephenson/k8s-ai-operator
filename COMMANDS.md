@@ -75,6 +75,8 @@ A missing or blank `request_id` or `user_prompt` is rejected before the prompt i
 
 The `reason` for the other field is `user_prompt is required`. Nothing is executed, and the request is logged but neither audited nor counted in `BlockedCommands`: a request with no `request_id` has no key to audit it under.
 
+A body that cannot be read as JSON (including an empty body) gets a `400`, and a request whose `Content-Type` is not JSON gets a `415`. Both are returned by Spring before the controller runs, so they use Spring Boot's default error body instead of the shape above, and the request is neither audited nor counted in `BlockedCommands`.
+
 **Post-Execution Error Response — `500 Internal Server Error`:**
 
 If the command was executed but the audit or metrics step then throws, the command is not reported or audited as blocked. The response keeps `allowed: true` and the command output, and `reason` carries the failure.

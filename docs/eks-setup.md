@@ -1,5 +1,7 @@
 # EKS Test Cluster Setup — k8s-ai-operator
 
+> ⚠️ **Deprecated** — `setup-eks.sh` is no longer the recommended way to provision a cluster. Use the Terraform and Helm workflow in the [README](../README.md#aws-deployment) instead.
+
 This guide provisions a minimal Amazon EKS cluster in `us-east-2` with sample workloads that give the k8s-ai-operator realistic targets for `get` and `apply` commands during testing.
 
 ---
@@ -12,7 +14,7 @@ This guide provisions a minimal Amazon EKS cluster in `us-east-2` with sample wo
 | [eksctl](https://eksctl.io/installation/) | EKS cluster provisioning (AWS-endorsed) | See link |
 | [kubectl](https://kubernetes.io/docs/tasks/tools/) | Cluster interaction and manifest apply | See link |
 
-All three must be on your `PATH` before running the script — it will exit early with a clear message if any are missing.
+The AWS CLI must be on your `PATH` before running the script. If `eksctl` or `kubectl` is missing, the script downloads the Linux amd64 binary and installs it to `/usr/local/bin` with `sudo`; on any other platform, install them yourself first.
 
 ---
 
@@ -38,7 +40,8 @@ The script performs the following actions in order:
 | Step | What happens |
 |---|---|
 | Verify credentials | Calls `aws sts get-caller-identity` to confirm the active IAM identity |
-| Check tools | Exits early if `eksctl`, `kubectl`, or `aws` are not on `PATH` |
+| Install missing tools | Installs `eksctl` and `kubectl` if they are not on `PATH` |
+| Check tools | Exits with an error if `eksctl`, `kubectl`, or `aws` is still not on `PATH` |
 | Create cluster | Runs `eksctl create cluster` — provisions VPC, subnets, IAM roles, managed node group, and OIDC provider via CloudFormation |
 | Update kubeconfig | Runs `aws eks update-kubeconfig` so `kubectl` points at the new cluster |
 | Create namespaces | Ensures `production`, `staging`, and `default` namespaces exist |
@@ -80,11 +83,13 @@ The script deploys the following resources to give the operator realistic query 
 | `Service/app-svc` | `production` | ClusterIP — target for `get services` |
 | `Deployment/app-deployment` | `staging` | 1-replica nginx — tests namespace-scoped queries |
 
-These match the mock output already returned by `K8sClientAdapter` in the application, so operator responses will be consistent whether running against the mock or a real cluster.
+The `app-deployment` and `app-svc` names also appear in the mock output returned by `K8sClientAdapter`, but the two are not connected: the mock also lists resources this script does not create (such as `worker` and `db-svc`), and it lists the same resources for every namespace.
 
 ---
 
 ## 4 — Test Operator Commands Against the Cluster
+
+> **Note:** `K8sClientAdapter` is a mock. The operator does not connect to this cluster: its responses are simulated, and an `apply` changes nothing. Comparing the two is only useful for checking the shape of the output.
 
 With the cluster running and `kubectl` configured, send requests to the operator:
 
@@ -160,5 +165,5 @@ The simplest approach for a test environment is to use an IAM user or role with 
 - The cluster is created in a **new dedicated VPC** — it does not share a VPC with the EC2 instance from `setup-ec2.sh`
 - Worker nodes are in **private subnets** by default with `eksctl`; the Kubernetes API endpoint is public but authenticated via IAM
 - The OIDC provider (`--with-oidc`) is enabled so that pods can assume IAM roles directly via service accounts — useful if you later move from mock to a real Kubernetes client in `K8sClientAdapter`
-- The `.k8s-cluster-state` file contains the cluster endpoint — keep it out of version control (add to `.gitignore`)
+- The `.k8s-cluster-state` file contains the cluster endpoint — keep it out of version control (it is already in `.gitignore`)
 
