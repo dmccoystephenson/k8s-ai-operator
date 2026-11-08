@@ -1,25 +1,34 @@
 package com.stephenson.k8saioperator;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stephenson.k8saioperator.model.ParsedCommand;
 import com.stephenson.k8saioperator.service.AnthropicCommandParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Flow;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Mocks HTTP responses from the Anthropic API and asserts the parsed command structure.
+ * Mocks HTTP responses from the Anthropic API and asserts the parsed command structure,
+ * and captures the outgoing request to check the endpoint, headers, model, token cap and message shape.
  */
 @ExtendWith(MockitoExtension.class)
 class AnthropicCommandParserTest {
@@ -177,7 +186,121 @@ class AnthropicCommandParserTest {
         assertEquals("get", parser.parse("show the pods").getVerb());
     }
 
+    @Test
+    void responseWithNoTextBlock_isRejected() throws Exception {
+        stubHttpResponse(200, "{\"id\":\"msg_001\",\"content\":["
+                + "{\"type\":\"tool_use\",\"id\":\"tu_1\",\"name\":\"kubectl\",\"input\":{}}"
+                + "],\"stop_reason\":\"tool_use\"}");
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("anything"));
+
+        assertEquals("No text content block in Anthropic response", ex.getMessage());
+    }
+
+    @Test
+    void missingFields_areReturnedAsEmptyStrings() throws Exception {
+        // The parser does not validate fields; an empty verb is left for VerbGuard to reject
+        stubHttpResponse(200, anthropicResponse("{\"resource\":\"pods\"}"));
+
+        ParsedCommand command = parser.parse("show the pods");
+
+        assertEquals("", command.getVerb());
+        assertEquals("pods", command.getResource());
+        assertEquals("", command.getNamespace());
+    }
+
+    @Test
+    void interruptedCall_restoresTheInterruptFlag() throws Exception {
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenThrow(new InterruptedException("sentinel-interrupt"));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("anything"));
+
+        // Thread.interrupted() also clears the flag so later tests on this thread are unaffected
+        assertTrue(Thread.interrupted());
+        assertEquals("Anthropic API call was interrupted", ex.getMessage());
+        assertInstanceOf(InterruptedException.class, ex.getCause());
+    }
+
+    // --- Outgoing request ---
+
+    @Test
+    void request_targetsTheMessagesApiWithTheConfiguredKey() throws Exception {
+        stubHttpResponse(200, anthropicResponse("{\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"}"));
+
+        parser.parse("show the pods");
+
+        HttpRequest request = capturedRequest();
+        assertEquals("POST", request.method());
+        assertEquals(URI.create("https://api.anthropic.com/v1/messages"), request.uri());
+        assertEquals("test-api-key", request.headers().firstValue("x-api-key").orElse(null));
+        assertEquals("2023-06-01", request.headers().firstValue("anthropic-version").orElse(null));
+        assertEquals("application/json", request.headers().firstValue("content-type").orElse(null));
+    }
+
+    @Test
+    void request_usesTheConfiguredModelAndTokenCap() throws Exception {
+        AnthropicCommandParser configured = new AnthropicCommandParser(
+                httpClient, new ObjectMapper(), "test-api-key", "sentinel-model", 137);
+        stubHttpResponse(200, anthropicResponse("{\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"}"));
+
+        configured.parse("show the pods");
+
+        JsonNode body = new ObjectMapper().readTree(bodyOf(capturedRequest()));
+        assertEquals("sentinel-model", body.path("model").asText());
+        assertEquals(137, body.path("max_tokens").asInt());
+        assertTrue(body.path("system").asText().contains("single kubectl-style command"),
+                body.path("system").asText());
+    }
+
+    @Test
+    void request_sendsThePromptAsTheOnlyUserMessage() throws Exception {
+        stubHttpResponse(200, anthropicResponse("{\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"}"));
+
+        parser.parse("sentinel-user-prompt");
+
+        JsonNode messages = new ObjectMapper().readTree(bodyOf(capturedRequest())).path("messages");
+        assertEquals(1, messages.size());
+        assertEquals("user", messages.get(0).path("role").asText());
+        assertEquals("sentinel-user-prompt", messages.get(0).path("content").asText());
+    }
+
     // --- Helpers ---
+
+    @SuppressWarnings("unchecked")
+    private HttpRequest capturedRequest() throws Exception {
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        return captor.getValue();
+    }
+
+    /** Drains the request's body publisher; BodyPublishers.ofString delivers synchronously. */
+    private static String bodyOf(HttpRequest request) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        request.bodyPublisher().orElseThrow().subscribe(new Flow.Subscriber<ByteBuffer>() {
+            @Override
+            public void onSubscribe(Flow.Subscription subscription) {
+                subscription.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(ByteBuffer item) {
+                byte[] bytes = new byte[item.remaining()];
+                item.get(bytes);
+                out.write(bytes, 0, bytes.length);
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                throw new IllegalStateException(throwable);
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        });
+        return out.toString(StandardCharsets.UTF_8);
+    }
 
     @SuppressWarnings("unchecked")
     private void stubHttpResponse(int statusCode, String body) throws Exception {
