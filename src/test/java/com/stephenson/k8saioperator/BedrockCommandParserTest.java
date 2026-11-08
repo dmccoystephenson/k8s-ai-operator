@@ -1,11 +1,13 @@
 package com.stephenson.k8saioperator;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stephenson.k8saioperator.model.ParsedCommand;
 import com.stephenson.k8saioperator.service.BedrockCommandParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.SdkBytes;
@@ -15,10 +17,12 @@ import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelResponse;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Mocks Bedrock responses and asserts the parsed command structure.
+ * Mocks Bedrock responses and asserts the parsed command structure, and captures
+ * the outgoing InvokeModel request to check the model id, token cap and message shape.
  */
 @ExtendWith(MockitoExtension.class)
 class BedrockCommandParserTest {
@@ -156,6 +160,78 @@ class BedrockCommandParserTest {
                 .thenReturn(invokeModelResponse(mockResponse));
 
         assertEquals("get", parser.parse("show the pods").getVerb());
+    }
+
+    @Test
+    void responseWithNoTextBlock_isRejected() {
+        String mockResponse = "{\"id\":\"msg_001\",\"content\":["
+                + "{\"type\":\"tool_use\",\"id\":\"tu_1\",\"name\":\"kubectl\",\"input\":{}}"
+                + "],\"stop_reason\":\"tool_use\"}";
+        when(bedrockRuntimeClient.invokeModel(any(InvokeModelRequest.class)))
+                .thenReturn(invokeModelResponse(mockResponse));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parser.parse("anything"));
+
+        assertEquals("No text content block in Bedrock response", ex.getMessage());
+    }
+
+    @Test
+    void missingFields_areReturnedAsEmptyStrings() {
+        // The parser does not validate fields; an empty verb is left for VerbGuard to reject
+        String mockResponse = bedrockResponse("{\"resource\":\"pods\"}");
+        when(bedrockRuntimeClient.invokeModel(any(InvokeModelRequest.class)))
+                .thenReturn(invokeModelResponse(mockResponse));
+
+        ParsedCommand command = parser.parse("show the pods");
+
+        assertEquals("", command.getVerb());
+        assertEquals("pods", command.getResource());
+        assertEquals("", command.getNamespace());
+    }
+
+    // --- Outgoing request ---
+
+    @Test
+    void request_usesTheConfiguredModelAndTokenCap() throws Exception {
+        BedrockCommandParser configured = new BedrockCommandParser(
+                bedrockRuntimeClient, new ObjectMapper(), "sentinel-model-id", 137);
+        when(bedrockRuntimeClient.invokeModel(any(InvokeModelRequest.class)))
+                .thenReturn(invokeModelResponse(
+                        bedrockResponse("{\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"}")));
+
+        configured.parse("show the pods");
+
+        ArgumentCaptor<InvokeModelRequest> captor = ArgumentCaptor.forClass(InvokeModelRequest.class);
+        verify(bedrockRuntimeClient).invokeModel(captor.capture());
+        InvokeModelRequest request = captor.getValue();
+        assertEquals("sentinel-model-id", request.modelId());
+        assertEquals("application/json", request.contentType());
+        assertEquals("application/json", request.accept());
+
+        JsonNode body = new ObjectMapper().readTree(request.body().asUtf8String());
+        assertEquals("bedrock-2023-05-31", body.path("anthropic_version").asText());
+        assertEquals(137, body.path("max_tokens").asInt());
+        assertTrue(body.path("system").asText().contains("single kubectl-style command"),
+                body.path("system").asText());
+    }
+
+    @Test
+    void request_sendsThePromptAsTheOnlyUserMessage() throws Exception {
+        when(bedrockRuntimeClient.invokeModel(any(InvokeModelRequest.class)))
+                .thenReturn(invokeModelResponse(
+                        bedrockResponse("{\"verb\":\"get\",\"resource\":\"pods\",\"namespace\":\"default\"}")));
+
+        parser.parse("sentinel-user-prompt");
+
+        ArgumentCaptor<InvokeModelRequest> captor = ArgumentCaptor.forClass(InvokeModelRequest.class);
+        verify(bedrockRuntimeClient).invokeModel(captor.capture());
+        JsonNode messages = new ObjectMapper().readTree(captor.getValue().body().asUtf8String()).path("messages");
+        assertEquals(1, messages.size());
+        assertEquals("user", messages.get(0).path("role").asText());
+        JsonNode content = messages.get(0).path("content");
+        assertEquals(1, content.size());
+        assertEquals("text", content.get(0).path("type").asText());
+        assertEquals("sentinel-user-prompt", content.get(0).path("text").asText());
     }
 
     // --- Helpers ---
