@@ -18,8 +18,9 @@ import java.util.logging.Logger;
  *
  * <p>What is sent: the program name ({@value #APPLICATION}), the event name, the operator's own
  * version (the Maven project version, or the jar's {@code Implementation-Version} when the
- * property is absent) and the static tag {@code service=true}, which marks it as a self-hosted
- * service. Nothing per request, and nothing about prompts, commands, clusters, namespaces,
+ * property is absent), the static tag {@code service=true}, which marks it as a self-hosted
+ * service, and a random per-installation ID as the tag {@code install} (see {@link TraceInstallId}),
+ * so running deployments can be counted rather than events. Nothing per request, and nothing about prompts, commands, clusters, namespaces,
  * users, hosts or addresses is ever included.
  *
  * <p>The event is sent by {@link TraceClient}, which returns immediately, never throws, and
@@ -59,7 +60,8 @@ public class UsageReporter {
         this.version = resolveVersion(version);
         this.client = buildClient(enabled, endpoint, key, this.version);
         if (client.isEnabled()) {
-            log.info("Usage reporting is on: a startup event (program name, version and service=true only) is sent to {}; "
+            log.info("Usage reporting is on: a startup event (program name, version, service=true and a random "
+                    + "installation ID only) is sent to {}; "
                     + "set USAGE_REPORTING_ENABLED=false (usage-reporting.enabled=false) or TRACE_USAGE_REPORTING=off "
                     + "to turn it off. Details: {}", endpoint, DETAILS_URL);
         } else {
@@ -91,7 +93,8 @@ public class UsageReporter {
 
     /**
      * The tags attached to the startup event: {@code service=true}. The client adds the
-     * version itself, as the tag {@code version}, to every event.
+     * version and the installation ID itself, as the tags {@code version} and {@code install},
+     * to every event.
      */
     Map<String, String> startupTags() {
         Map<String, String> tags = new LinkedHashMap<>();

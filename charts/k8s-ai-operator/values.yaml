@@ -57,7 +57,8 @@ aws:
   credentialsSecret: ""
 
 # Usage reporting: on start-up the operator sends ONE "startup" event (program name,
-# version and service=true) to https://trace.danielstephenson.dev; nothing per request and
+# version, service=true and a random installation ID as the tag install) to
+# https://trace.danielstephenson.dev; nothing per request and
 # nothing about prompts, commands or the cluster. Set to false to turn it off.
 # Details: https://danielstephenson.dev/usage-reporting
 usageReporting:
