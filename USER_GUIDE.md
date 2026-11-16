@@ -10,7 +10,7 @@
 |------|---------------|--------|
 | AWS CLI v2 | https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html | `aws --version` |
 | Java 21 | https://adoptium.net/ | `java -version` |
-| Maven 3.9+ | https://maven.apache.org/download.cgi | `mvn -version` |
+| Maven Wrapper | Included in the repo (`./mvnw` downloads Maven, so no separate install is needed) | `./mvnw --version` |
 | AWS SAM CLI | https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html | `sam --version` |
 
 ### AWS Account Requirements

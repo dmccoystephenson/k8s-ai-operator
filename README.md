@@ -10,8 +10,7 @@ k8s-ai-operator is an AI-powered Kubernetes operator service that allows platfor
 
 ### Prerequisites
 
-- Java 21
-- Maven 3.9+
+- Java 21 (Maven itself is not needed: the Maven Wrapper, `./mvnw`, downloads the Maven version it uses)
 - AWS CLI configured with appropriate credentials
 - AWS SAM CLI (for local Lambda emulation)
 
@@ -99,8 +98,7 @@ A fully local workflow is available using Docker (Postgres) and Minikube in plac
 
 #### Prerequisites
 
-- Java 21
-- Maven 3.9+
+- Java 21 (no separate Maven install: `./mvnw` downloads Maven)
 - Docker (for the local Postgres container)
 - Minikube (for a local Kubernetes cluster)
 - An Anthropic API key (`ANTHROPIC_API_KEY`)

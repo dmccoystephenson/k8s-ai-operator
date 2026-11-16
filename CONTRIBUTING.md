@@ -13,8 +13,7 @@ Thank you for your interest in contributing to k8s-ai-operator! This guide will 
 - A GitHub account
 - Git installed on your local machine
 - A Java IDE or text editor
-- Java 21
-- Maven 3.9+
+- Java 21 (Maven itself is not needed: the Maven Wrapper, `./mvnw`, downloads the Maven version it uses)
 - A basic understanding of Java and Spring Boot
 
 ### Optional (for fully local end-to-end testing, no AWS required)

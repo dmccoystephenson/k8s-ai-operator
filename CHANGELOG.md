@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `docs/deploy.md` *Step 6* now rewrites the image placeholder, which the previous command left in place, and notes the `deploy.sh` image path bug (#45). It also lists the Java 21 prerequisite
 - `docs/eks-setup.md` now says `setup-eks.sh` installs a missing `eksctl` or `kubectl` instead of exiting, and no longer implies the operator talks to the sample cluster. `docs/user-guide.md` now says the Kubernetes client is simulated, lists what `deploy.sh` needs on the EC2 instance, and deletes the key pair during teardown
 - `CONFIG.md` now documents the `install` tag, the unusable-endpoint behaviour and the three local-profile keys it was missing, and says a missing version is sent as `unknown`. `COMMANDS.md` now covers the `400` and `415` that Spring returns for an unreadable body or a non-JSON `Content-Type`
+- `README.md`, `CONTRIBUTING.md`, `USER_GUIDE.md` and `docs/ec2-setup.md` no longer list a Maven 3.9+ install as a prerequisite: the Maven Wrapper (`./mvnw`) downloads Maven itself. `docs/ec2-setup.md` now builds with `./mvnw` instead of `mvn`
 
 ## [0.0.1] — Initial release
 
