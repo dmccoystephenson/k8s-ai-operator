@@ -9,7 +9,7 @@ This guide walks through spinning up an EC2 instance in `us-east-2` and deployin
 ## Prerequisites
 
 - [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed and configured (`aws configure`)
-- Java 21 and Maven 3.9+ installed locally (to build the JAR)
+- Java 21 installed locally (to build the JAR; the Maven Wrapper, `./mvnw`, downloads Maven, so no separate Maven install is needed)
 - `curl` available in your shell (used to detect your public IP for SSH ingress)
 - Sufficient IAM permissions to manage EC2, key pairs, and security groups
 
@@ -163,7 +163,7 @@ java -version
 On your **local machine**, build the fat JAR:
 
 ```bash
-mvn clean package -DskipTests
+./mvnw clean package -DskipTests
 ```
 
 This produces a JAR under `target/k8s-ai-operator-*.jar`.
