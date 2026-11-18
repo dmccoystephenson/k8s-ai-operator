@@ -83,7 +83,7 @@ Key test cases:
 - `CloudWatchMetricsEmitterTest` — verifies the CloudWatch metric name, value, unit, namespace and `Service` dimension for each metric, and that publish failures are swallowed
 - `K8sClientAdapterTest` — verifies the simulated `get` listings per resource type with the namespace appended, the `apply` message, case-insensitive dispatch, and the messages for unrecognised verbs and resource types
 - `BeanSelectionTest` — verifies which command parser, audit service and metrics emitter are registered for each `llm.provider` value and Spring profile, and that the Bedrock, DynamoDB and CloudWatch clients are only registered where they are used
-- `UsageReporterTest` — exercises the startup usage report against a loopback stub
+- `UsageReporterTest` — exercises the startup usage report against a loopback stub, and verifies that a blank endpoint or overlong version turns reporting off without failing start-up, that a malformed endpoint leaves reporting on and drops the report, and that the configured version is trimmed (blank falls back to `unknown`)
 - `TraceClientTest` — verifies the vendored trace client's opt-out precedence (environment, server-wide file, `enabled`, key), server-wide file and install-ID handling, tag merging and JSON encoding, and the request a report sends to a loopback stub
 - `TraceInstallIdTest` — verifies that `TRACE_INSTALL_ID` pins the installation ID (trimmed; blank or overlong values are ignored) and where the install-ID file lives on Linux (`$XDG_DATA_HOME` or `~/.local/share`), macOS and Windows
 - `K8sAiOperatorApplicationTests` — verifies the Spring context loads

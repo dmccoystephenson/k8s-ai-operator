@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -88,6 +89,64 @@ class UsageReporterTest {
         assertEquals("true", reporter.startupTags().get("service"));
         assertFalse(reporter.startupTags().containsKey("version"), "the client adds version itself");
     }
+
+    // --- Configuration the client cannot use ---
+
+    @Test
+    void blankEndpointTurnsReportingOffWithoutFailingStartUp() {
+        UsageReporter reporter = new UsageReporter(true, "   ", "a-key", "1.0");
+        reporter.reportStartup();
+        reporter.close();
+
+        assertFalse(reporter.isReporting());
+        assertNull(reporter.installId());
+        assertTrue(bodies.isEmpty());
+    }
+
+    @Test
+    void overlongVersionTurnsReportingOffWithoutFailingStartUp() {
+        UsageReporter reporter = new UsageReporter(true, endpoint, "a-key", "v".repeat(TraceClient.MAX_TAG_LENGTH + 1));
+        reporter.reportStartup();
+        reporter.close();
+
+        assertFalse(reporter.isReporting());
+        assertTrue(bodies.isEmpty());
+    }
+
+    /**
+     * Only a blank endpoint is rejected up front. A non-blank one that is not a URL still gives
+     * an enabled client; the send then fails on the client's own thread and is dropped.
+     */
+    @Test
+    void malformedEndpointLeavesReportingOnAndDropsTheReport() {
+        if (environmentOptsOut()) {
+            return; // the environment has switched reporting off; that path is the client's to test
+        }
+        UsageReporter reporter = new UsageReporter(true, "not-a-url", "a-key", "1.0");
+        assertDoesNotThrow(reporter::reportStartup);
+        reporter.close();
+
+        assertTrue(reporter.isReporting());
+        assertTrue(bodies.isEmpty());
+    }
+
+    // --- Version ---
+
+    @Test
+    void configuredVersionIsTrimmed() {
+        UsageReporter reporter = new UsageReporter(false, endpoint, "a-key", "  1.2.3  ");
+
+        assertEquals("1.2.3", reporter.version());
+    }
+
+    @Test
+    void blankVersionFallsBackToUnknown() {
+        UsageReporter reporter = new UsageReporter(false, endpoint, "a-key", "  ");
+
+        assertEquals(UsageReporter.UNKNOWN_VERSION, reporter.version());
+    }
+
+    // --- Sending ---
 
     @Test
     void sendsOneStartupEventWithServiceAndVersionTags() {
