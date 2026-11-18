@@ -29,7 +29,8 @@ import java.util.logging.Logger;
  * through the {@code usage-reporting.*} properties in {@code application.yml} (each with an
  * environment override): set {@code USAGE_REPORTING_ENABLED=false} (Helm:
  * {@code usageReporting.enabled=false}) to turn it off. A blank key also disables it, and a
- * malformed endpoint yields a disabled client rather than a failed start-up.
+ * blank endpoint (or an overlong version) yields a disabled client rather than a failed start-up;
+ * a non-blank endpoint that is not a usable URL leaves the client enabled and the send fails quietly.
  * {@code TRACE_USAGE_REPORTING=off} and {@code DO_NOT_TRACK=1} in the environment turn it off
  * too: the client checks those two itself, before this program's own setting, so they always
  * win. Details: {@value #DETAILS_URL}.
