@@ -177,7 +177,7 @@ k8s:
 **Type:** boolean  
 **Default:** `true`  
 **Environment variable:** `USAGE_REPORTING_ENABLED` (Helm: `usageReporting.enabled`)  
-**Description:** Whether the operator sends one `startup` event (program name, version, the tag `service=true` and a random installation ID as the tag `install`) to the trace usage-tracking service when it starts. Nothing is sent per request, and nothing about prompts, commands, clusters, users or hosts. `TRACE_USAGE_REPORTING=off` or `DO_NOT_TRACK=1` in the environment also turn it off and win over this setting. See [Usage reporting](README.md#usage-reporting).
+**Description:** Whether the operator sends one `startup` event (program name, version, the tag `service=true` and a random installation ID as the tag `install`) to the trace usage-tracking service when it starts. Nothing is sent per request, and nothing about prompts, commands, clusters, users or hosts. It fails closed: only `true`, `on`, `yes` or `1` (any case) keep reporting on, so `false`, `off`, `no`, `0`, a blank value (`USAGE_REPORTING_ENABLED=""`) or a typo turn it off; the default `true` applies only when the property is not set at all. `TRACE_USAGE_REPORTING` set to anything but blank, `true`, `on`, `yes` or `1`, or `DO_NOT_TRACK` set to anything but blank, `0`, `false`, `off` or `no`, also turn it off and win over this setting. See [Usage reporting](README.md#usage-reporting).
 
 ## usage-reporting.endpoint
 

@@ -51,9 +51,28 @@ class UsageReporterTest {
     }
 
     @Test
+    void enabledThatDoesNotClearlyMeanOnTurnsReportingOff() {
+        for (String off : new String[] {"false", "FALSE", "off", "no", "0", "", "  ", "disabled", "flase", null}) {
+            UsageReporter reporter = new UsageReporter(off, endpoint, "a-key", "1.0");
+            reporter.reportStartup();
+            reporter.close();
+            assertFalse(reporter.isReporting(), "'" + off + "' switches reporting off");
+            assertNull(reporter.installId(), "'" + off + "' makes up no installation ID");
+        }
+        if (environmentOptsOut()) {
+            return; // the environment has switched reporting off; that path is the client's to test
+        }
+        for (String on : new String[] {"true", " TRUE ", "on", "yes", "1"}) {
+            UsageReporter reporter = new UsageReporter(on, endpoint, "a-key", "1.0");
+            reporter.close();
+            assertTrue(reporter.isReporting(), "'" + on + "' leaves reporting on");
+        }
+    }
+
+    @Test
     void carriesARandomInstallationIdOnlyWhileReportingIsOn() {
-        UsageReporter on = new UsageReporter(true, endpoint, "a-key", "1.0");
-        UsageReporter off = new UsageReporter(false, endpoint, "a-key", "1.0");
+        UsageReporter on = new UsageReporter("true", endpoint, "a-key", "1.0");
+        UsageReporter off = new UsageReporter("false", endpoint, "a-key", "1.0");
 
         assertNotNull(on.installId(), "an enabled client carries a random installation ID");
         assertNull(off.installId(), "a disabled client never makes up an ID");
@@ -63,7 +82,7 @@ class UsageReporterTest {
 
     @Test
     void disabledSettingSendsNothing() {
-        UsageReporter reporter = new UsageReporter(false, endpoint, "a-key", "1.0");
+        UsageReporter reporter = new UsageReporter("false", endpoint, "a-key", "1.0");
         reporter.reportStartup();
         reporter.close();
 
@@ -73,7 +92,7 @@ class UsageReporterTest {
 
     @Test
     void blankKeySendsNothing() {
-        UsageReporter reporter = new UsageReporter(true, endpoint, "", "1.0");
+        UsageReporter reporter = new UsageReporter("true", endpoint, "", "1.0");
         reporter.reportStartup();
         reporter.close();
 
@@ -83,7 +102,7 @@ class UsageReporterTest {
 
     @Test
     void unfilteredVersionPlaceholderIsNotSent() {
-        UsageReporter reporter = new UsageReporter(false, endpoint, "a-key", "@project.version@");
+        UsageReporter reporter = new UsageReporter("false", endpoint, "a-key", "@project.version@");
         // Outside a packaged jar there is no manifest version either.
         assertEquals("unknown", reporter.version());
         assertEquals("true", reporter.startupTags().get("service"));
@@ -94,7 +113,7 @@ class UsageReporterTest {
 
     @Test
     void blankEndpointTurnsReportingOffWithoutFailingStartUp() {
-        UsageReporter reporter = new UsageReporter(true, "   ", "a-key", "1.0");
+        UsageReporter reporter = new UsageReporter("true", "   ", "a-key", "1.0");
         reporter.reportStartup();
         reporter.close();
 
@@ -105,7 +124,7 @@ class UsageReporterTest {
 
     @Test
     void overlongVersionTurnsReportingOffWithoutFailingStartUp() {
-        UsageReporter reporter = new UsageReporter(true, endpoint, "a-key", "v".repeat(TraceClient.MAX_TAG_LENGTH + 1));
+        UsageReporter reporter = new UsageReporter("true", endpoint, "a-key", "v".repeat(TraceClient.MAX_TAG_LENGTH + 1));
         reporter.reportStartup();
         reporter.close();
 
@@ -122,7 +141,7 @@ class UsageReporterTest {
         if (environmentOptsOut()) {
             return; // the environment has switched reporting off; that path is the client's to test
         }
-        UsageReporter reporter = new UsageReporter(true, "not-a-url", "a-key", "1.0");
+        UsageReporter reporter = new UsageReporter("true", "not-a-url", "a-key", "1.0");
         assertDoesNotThrow(reporter::reportStartup);
         reporter.close();
 
@@ -134,14 +153,14 @@ class UsageReporterTest {
 
     @Test
     void configuredVersionIsTrimmed() {
-        UsageReporter reporter = new UsageReporter(false, endpoint, "a-key", "  1.2.3  ");
+        UsageReporter reporter = new UsageReporter("false", endpoint, "a-key", "  1.2.3  ");
 
         assertEquals("1.2.3", reporter.version());
     }
 
     @Test
     void blankVersionFallsBackToUnknown() {
-        UsageReporter reporter = new UsageReporter(false, endpoint, "a-key", "  ");
+        UsageReporter reporter = new UsageReporter("false", endpoint, "a-key", "  ");
 
         assertEquals(UsageReporter.UNKNOWN_VERSION, reporter.version());
     }
@@ -153,7 +172,7 @@ class UsageReporterTest {
         if (environmentOptsOut()) {
             return; // the environment has switched reporting off; that path is the client's to test
         }
-        UsageReporter reporter = new UsageReporter(true, endpoint, "a-key", "1.2.3");
+        UsageReporter reporter = new UsageReporter("true", endpoint, "a-key", "1.2.3");
         reporter.reportStartup();
         reporter.close();
 

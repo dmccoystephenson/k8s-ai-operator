@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Usage reporting stays off once it is turned off. `usage-reporting.enabled` is read through the trace client's `allowsReporting`, so a blank `USAGE_REPORTING_ENABLED`, a typo or any value but `true`/`on`/`yes`/`1` turns reporting off, instead of being bound as a Spring boolean. The vendored `TraceClient` is now trace-client-java 0.8.0, whose `TRACE_USAGE_REPORTING` and `DO_NOT_TRACK` checks fail closed too
 - `k8s.disallowed-verbs` now takes precedence over `k8s.allowed-verbs`: a verb listed in both is rejected instead of executed. Configured verbs are trimmed and lowercased, so `get, apply` allows `apply` and `delete, EXEC` blocks `exec`
 - `POST /k8s/execute` no longer reports a command that was executed as blocked when the audit or metrics step afterwards fails. It now returns `500` with `allowed: true`, the command output and a `reason`, and does not call `recordBlocked` or count a blocked command
 - `POST /k8s/execute` no longer re-audits a blocked request with the audit/metrics error as its reason, or counts it as blocked twice, when recording the blocked request throws. That failure is now logged and the `400` keeps its `ExecuteResponse` shape and original `reason`, instead of escaping as Spring's default `500` body. As on the allowed path, the bundled audit and metrics classes already swallow their own write failures, so this covers an exception that escapes them
