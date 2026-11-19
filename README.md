@@ -569,8 +569,10 @@ Every event also carries a random installation ID as the tag `install`, so the n
 To turn it off, any one of these is enough:
 
 - `USAGE_REPORTING_ENABLED=false` in the environment (Helm: `--set usageReporting.enabled=false`; `k8s-operator-manifest.yaml`: the `USAGE_REPORTING_ENABLED` entry in the ConfigMap)
-- `TRACE_USAGE_REPORTING=off` (also `false`, `0`, `no`) in the environment — the switch every trace client honours, checked before the operator's own setting
-- `DO_NOT_TRACK=1` (also `true`, `yes`) in the environment, per [consoledonottrack.com](https://consoledonottrack.com)
+- `TRACE_USAGE_REPORTING=off` in the environment — the switch every trace client honours, checked before the operator's own setting
+- `DO_NOT_TRACK=1` in the environment, per [consoledonottrack.com](https://consoledonottrack.com)
+
+Every switch fails closed. `USAGE_REPORTING_ENABLED` keeps reporting on only when it is `true`, `on`, `yes` or `1`; `false`, `off`, `no`, `0`, a blank value or a typo turn it off, and the default `true` applies only when it is not set at all. `TRACE_USAGE_REPORTING` set to anything but blank, `true`, `on`, `yes` or `1` turns reporting off, and so does `DO_NOT_TRACK` set to anything but blank, `0`, `false`, `off` or `no`.
 
 The bundled `usage-reporting.key` is the write key issued to k8s-ai-operator; it can only add usage events and is not secret. See [`usage-reporting.enabled`](CONFIG.md#usage-reportingenabled) in the Configuration Guide, and for what trace collects and why: https://danielstephenson.dev/usage-reporting
 

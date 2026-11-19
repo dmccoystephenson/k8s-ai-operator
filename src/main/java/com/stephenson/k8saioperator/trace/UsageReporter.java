@@ -28,7 +28,9 @@ import java.util.logging.Logger;
  * costs the operator nothing but a dropped report. Reporting is on by default and is configured
  * through the {@code usage-reporting.*} properties in {@code application.yml} (each with an
  * environment override): set {@code USAGE_REPORTING_ENABLED=false} (Helm:
- * {@code usageReporting.enabled=false}) to turn it off. A blank key also disables it, and a
+ * {@code usageReporting.enabled=false}) to turn it off; it fails closed, so any value but
+ * {@code true}, {@code on}, {@code yes} or {@code 1} -- a blank one or a typo included -- turns it
+ * off, and only an unset property defaults to on. A blank key also disables it, and a
  * blank endpoint (or an overlong version) yields a disabled client rather than a failed start-up;
  * a non-blank endpoint that is not a usable URL leaves the client enabled and the send fails quietly.
  * {@code TRACE_USAGE_REPORTING=off} and {@code DO_NOT_TRACK=1} in the environment turn it off
@@ -54,12 +56,16 @@ public class UsageReporter {
     private final String version;
 
     public UsageReporter(
-            @Value("${usage-reporting.enabled:true}") boolean enabled,
+            @Value("${usage-reporting.enabled:true}") String enabled,
             @Value("${usage-reporting.endpoint:https://trace.danielstephenson.dev}") String endpoint,
             @Value("${usage-reporting.key:}") String key,
             @Value("${usage-reporting.version:}") String version) {
         this.version = resolveVersion(version);
-        this.client = buildClient(enabled, endpoint, key, this.version);
+        // Read as text and through the client's helper rather than bound as a boolean: only
+        // true/on/yes/1 keep reporting on, so false, off, no, 0, a blank USAGE_REPORTING_ENABLED
+        // or a typo turn it off instead of failing the start-up or being read as on. The
+        // default "true" applies only when the property is not set at all.
+        this.client = buildClient(TraceClient.allowsReporting(enabled), endpoint, key, this.version);
         if (client.isEnabled()) {
             log.info("Usage reporting is on: a startup event (program name, version, service=true and a random "
                     + "installation ID only) is sent to {}; "
