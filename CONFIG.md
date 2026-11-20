@@ -184,7 +184,7 @@ k8s:
 **Type:** string  
 **Default:** `https://trace.danielstephenson.dev`  
 **Environment variable:** `USAGE_REPORTING_ENDPOINT`  
-**Description:** The trace service the startup event is sent to. A blank endpoint turns reporting off and logs a warning. A non-blank endpoint is not checked at start-up: one that is not a usable URL leaves reporting on, and the startup event is then dropped when it fails to send. Neither stops the application from starting.
+**Description:** The trace service the startup event is sent to. A blank endpoint, or one that is not an absolute `http` or `https` URL with a host (for example `not-a-url` or `ftp://trace.example.com`), turns reporting off and logs a warning that names the problem. Neither stops the application from starting.
 
 ## usage-reporting.key
 

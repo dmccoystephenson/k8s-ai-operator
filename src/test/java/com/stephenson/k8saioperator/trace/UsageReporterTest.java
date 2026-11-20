@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** Exercises the reporter against a loopback stub; nothing here ever reaches the real service. */
 class UsageReporterTest {
@@ -132,21 +133,34 @@ class UsageReporterTest {
         assertTrue(bodies.isEmpty());
     }
 
-    /**
-     * Only a blank endpoint is rejected up front. A non-blank one that is not a URL still gives
-     * an enabled client; the send then fails on the client's own thread and is dropped.
-     */
     @Test
-    void malformedEndpointLeavesReportingOnAndDropsTheReport() {
-        if (environmentOptsOut()) {
-            return; // the environment has switched reporting off; that path is the client's to test
-        }
-        UsageReporter reporter = new UsageReporter("true", "not-a-url", "a-key", "1.0");
-        assertDoesNotThrow(reporter::reportStartup);
-        reporter.close();
+    void malformedEndpointTurnsReportingOffWithoutFailingStartUp() {
+        for (String unusable : new String[] {"not-a-url", "trace.example.com", "ftp://trace.example.com",
+                "http://", "http://exa mple.com", "file:///tmp/metrics"}) {
+            UsageReporter reporter = new UsageReporter("true", unusable, "a-key", "1.0");
+            assertDoesNotThrow(reporter::reportStartup);
+            reporter.close();
 
-        assertTrue(reporter.isReporting());
+            assertFalse(reporter.isReporting(), "'" + unusable + "' turns reporting off");
+            assertNull(reporter.installId(), "'" + unusable + "' makes up no installation ID");
+        }
         assertTrue(bodies.isEmpty());
+    }
+
+    @Test
+    void checkEndpoint_acceptsHttpAndHttpsUrlsAndLeavesBlankToTheBuilder() {
+        assertDoesNotThrow(() -> UsageReporter.checkEndpoint("https://trace.danielstephenson.dev"));
+        assertDoesNotThrow(() -> UsageReporter.checkEndpoint("  HTTP://127.0.0.1:8080/  "));
+        assertDoesNotThrow(() -> UsageReporter.checkEndpoint(endpoint));
+        assertDoesNotThrow(() -> UsageReporter.checkEndpoint("   "));
+        assertDoesNotThrow(() -> UsageReporter.checkEndpoint(null));
+    }
+
+    @Test
+    void checkEndpoint_namesTheSettingWhenTheEndpointIsUnusable() {
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> UsageReporter.checkEndpoint("not-a-url"));
+        assertTrue(thrown.getMessage().startsWith("usage-reporting.endpoint"), thrown.getMessage());
     }
 
     // --- Version ---

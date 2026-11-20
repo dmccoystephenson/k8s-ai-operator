@@ -8,6 +8,9 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -31,8 +34,8 @@ import java.util.logging.Logger;
  * {@code usageReporting.enabled=false}) to turn it off; it fails closed, so any value but
  * {@code true}, {@code on}, {@code yes} or {@code 1} -- a blank one or a typo included -- turns it
  * off, and only an unset property defaults to on. A blank key also disables it, and a
- * blank endpoint (or an overlong version) yields a disabled client rather than a failed start-up;
- * a non-blank endpoint that is not a usable URL leaves the client enabled and the send fails quietly.
+ * blank endpoint, an endpoint that is not an absolute {@code http} or {@code https} URL, or an
+ * overlong version yields a disabled client and a warning rather than a failed start-up.
  * {@code TRACE_USAGE_REPORTING=off} and {@code DO_NOT_TRACK=1} in the environment turn it off
  * too: the client checks those two itself, before this program's own setting, so they always
  * win. Details: {@value #DETAILS_URL}.
@@ -125,6 +128,9 @@ public class UsageReporter {
 
     private static TraceClient buildClient(boolean enabled, String endpoint, String key, String version) {
         try {
+            if (enabled) {
+                checkEndpoint(endpoint);
+            }
             // The program's own switch goes to the builder rather than short-circuiting here, so
             // the client applies its precedence (environment first) and disabledReason() names
             // the switch that actually turned reporting off.
@@ -137,8 +143,33 @@ public class UsageReporter {
                     .build();
         } catch (RuntimeException invalid) {
             // A usage report must never be the reason the operator fails to start.
-            log.warn("Usage reporting is off: the configured endpoint could not be used ({})", invalid.getMessage());
+            log.warn("Usage reporting is off: the usage-reporting settings could not be used ({})", invalid.getMessage());
             return TraceClient.disabled();
+        }
+    }
+
+    /**
+     * Rejects a non-blank endpoint that the client could never send to: anything that is not an
+     * absolute {@code http} or {@code https} URL with a host. A blank one is left to the builder,
+     * which rejects it itself.
+     *
+     * @throws IllegalArgumentException naming {@code usage-reporting.endpoint} when it is unusable
+     */
+    static void checkEndpoint(String endpoint) {
+        if (endpoint == null || endpoint.trim().isEmpty()) {
+            return;
+        }
+        String trimmed = endpoint.trim();
+        URI uri;
+        try {
+            uri = new URI(trimmed);
+            uri.toURL();
+        } catch (URISyntaxException | MalformedURLException | IllegalArgumentException invalid) {
+            throw new IllegalArgumentException("usage-reporting.endpoint is not a usable URL: " + trimmed, invalid);
+        }
+        String scheme = uri.getScheme();
+        if (!("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) || uri.getHost() == null) {
+            throw new IllegalArgumentException("usage-reporting.endpoint is not an http or https URL: " + trimmed);
         }
     }
 
