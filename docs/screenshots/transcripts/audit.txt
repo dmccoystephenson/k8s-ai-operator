@@ -1,0 +1,31 @@
+DynamoDB PutItem (K8sAgentExecutions)
+  allowed                {"BOOL": true}
+  execution_latency_ms   {"N": "<ms>"}
+  parsed_namespace       {"S": "production"}
+  parsed_resource        {"S": "pods"}
+  parsed_verb            {"S": "get"}
+  request_id             {"S": "req-001"}
+  timestamp              {"S": "<iso-8601>"}
+CloudWatch PutMetricData AllowedCommands
+CloudWatch PutMetricData ExecutionLatencyMs
+DynamoDB PutItem (K8sAgentExecutions)
+  allowed                {"BOOL": true}
+  execution_latency_ms   {"N": "<ms>"}
+  parsed_namespace       {"S": "staging"}
+  parsed_resource        {"S": "deployments"}
+  parsed_verb            {"S": "get"}
+  request_id             {"S": "req-002"}
+  timestamp              {"S": "<iso-8601>"}
+CloudWatch PutMetricData AllowedCommands
+CloudWatch PutMetricData ExecutionLatencyMs
+DynamoDB PutItem (K8sAgentExecutions)
+  allowed                {"BOOL": false}
+  block_reason           {"S": "Verb 'delete' is not permitted"}
+  execution_latency_ms   {"N": "<ms>"}
+  parsed_namespace       {"S": "production"}
+  parsed_resource        {"S": "pods"}
+  parsed_verb            {"S": "delete"}
+  request_id             {"S": "req-003"}
+  timestamp              {"S": "<iso-8601>"}
+CloudWatch PutMetricData BlockedCommands
+CloudWatch PutMetricData ExecutionLatencyMs

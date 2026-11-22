@@ -1,0 +1,26 @@
+{
+  "out": ".",
+  "devices": { "term": { "width": 1000, "height": 1200, "dpr": 2 } },
+  "defaults": {
+    "kind": "still", "device": "term", "format": "png", "colors": 32,
+    "crop": { "of": ".term", "pad": 0 }
+  },
+  "shots": [
+    { "name": "api-allowed", "url": "file://{manifest_dir}/tools/pages/allowed.html",
+      "inputs": ["tools/pages/allowed.html"],
+      "caption": "Two plain-English prompts become get commands; the operator returns the parsed command and the (mock) cluster listing.",
+      "alt": "Terminal: two curl calls to POST /k8s/execute return HTTP 200 with the parsed get command and a kubectl-style table of pods, then deployments" },
+    { "name": "api-blocked", "url": "file://{manifest_dir}/tools/pages/blocked.html",
+      "inputs": ["tools/pages/blocked.html"],
+      "caption": "A delete is parsed but refused by the verb guard; a request without request_id is rejected before parsing.",
+      "alt": "Terminal: a delete prompt returns HTTP 400 with reason Verb 'delete' is not permitted, and an empty request_id returns HTTP 400 request_id is required" },
+    { "name": "audit-trail", "url": "file://{manifest_dir}/tools/pages/audit.html",
+      "inputs": ["tools/pages/audit.html"],
+      "caption": "The audit items and metrics the operator sent for those requests; the prompt text is never stored.",
+      "alt": "Terminal: three DynamoDB PutItem audit items (two allowed, one blocked with block_reason) and the CloudWatch metric names sent after each" },
+    { "name": "tests", "url": "file://{manifest_dir}/tools/pages/tests.html",
+      "inputs": ["tools/pages/tests.html"],
+      "caption": "The Maven test suite: 244 tests across 14 classes.",
+      "alt": "Terminal: Maven Surefire output listing each test class with zero failures and BUILD SUCCESS, 244 tests run" }
+  ]
+}

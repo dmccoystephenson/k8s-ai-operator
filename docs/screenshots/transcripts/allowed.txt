@@ -1,0 +1,39 @@
+$ curl -s -X POST http://127.0.0.1:42255/k8s/execute -H 'Content-Type: application/json' \
+    -d '{"request_id": "req-001", "user_prompt": "Show me the pods in namespace production"}'
+HTTP 200
+{
+  "request_id": "req-001",
+  "command": {
+    "verb": "get",
+    "resource": "pods",
+    "namespace": "production"
+  },
+  "result": "<printed unescaped below>",
+  "allowed": true
+}
+result:
+NAME                          READY   STATUS    RESTARTS   AGE
+app-deployment-7d4f9b-xk2p9   1/1     Running   0          2d
+app-deployment-7d4f9b-lm3q7   1/1     Running   0          2d
+db-statefulset-0              1/1     Running   1          5d
+Namespace: production
+
+$ curl -s -X POST http://127.0.0.1:42255/k8s/execute -H 'Content-Type: application/json' \
+    -d '{"request_id": "req-002", "user_prompt": "Which deployments are running in staging?"}'
+HTTP 200
+{
+  "request_id": "req-002",
+  "command": {
+    "verb": "get",
+    "resource": "deployments",
+    "namespace": "staging"
+  },
+  "result": "<printed unescaped below>",
+  "allowed": true
+}
+result:
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+app-deployment   2/2     2            2           5d
+worker           1/1     1            1           3d
+Namespace: staging
+

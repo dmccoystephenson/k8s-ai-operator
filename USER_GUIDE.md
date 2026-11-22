@@ -68,6 +68,10 @@ Response (`400 Bad Request`):
 }
 ```
 
+The same request against a locally built operator (the second call shows a request rejected for a missing `request_id`):
+
+![Terminal: a delete prompt returns HTTP 400 with reason Verb 'delete' is not permitted, and an empty request_id returns HTTP 400 request_id is required](docs/screenshots/api-blocked.png)
+
 ## Permissions
 
 | Permission | Default | Description |

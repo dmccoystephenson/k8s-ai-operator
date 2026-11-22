@@ -4,6 +4,23 @@
 
 k8s-ai-operator is an AI-powered Kubernetes operator service that allows platform operators to inspect and apply Kubernetes manifests using natural language. Built with Spring Boot and AWS-native services, it translates plain-English prompts into structured `kubectl`-style commands, enforces a strict verb allowlist, executes them against a Kubernetes client, and maintains a full audit trail in DynamoDB.
 
+![Terminal: two curl calls to POST /k8s/execute return HTTP 200 with the parsed get command and a kubectl-style table of pods, then deployments](docs/screenshots/api-allowed.png)
+
+*A real run of the operator: plain-English prompts in, a parsed `get` command and the cluster listing out. The Kubernetes client is the built-in mock, and Bedrock, DynamoDB and CloudWatch were a local stub (see [Screenshots](#screenshots)).*
+
+### Screenshots
+
+| | |
+|---|---|
+| ![Terminal: a delete prompt returns HTTP 400 with reason Verb 'delete' is not permitted, and an empty request_id returns HTTP 400 request_id is required](docs/screenshots/api-blocked.png) | ![Terminal: three DynamoDB PutItem audit items (two allowed, one blocked with block_reason) and the CloudWatch metric names sent after each](docs/screenshots/audit-trail.png) |
+| **Blocked.** A `delete` is parsed but refused by the verb guard in code; a request without `request_id` is rejected before the prompt is parsed. | **Audit trail.** The `K8sAgentExecutions` items and CloudWatch metrics sent for the three audited requests. The prompt text is never stored. |
+| ![Terminal: Maven Surefire output listing each test class with zero failures and BUILD SUCCESS, 244 tests run](docs/screenshots/tests.png) | |
+| **Tests.** `./mvnw clean package`: 244 tests across 14 classes. | |
+
+These are real responses from the built JAR, captured without an AWS account or a cluster: the AWS clients were pointed at a small local stub (`docs/screenshots/tools/stub_aws.py`) that returns a fixed command for each prompt instead of calling a model, and records the DynamoDB items and CloudWatch metric names the operator sends. Request latency and timestamps are masked as `<ms>` and `<iso-8601>`.
+
+**Regenerating screenshots:** after `./mvnw clean package` (Java 21), run `docs/screenshots/tools/demo.sh`, then `python3 docs/screenshots/tools/render_terminal.py` and `darkroom shoot docs/screenshots/media.json` ([darkroom](https://github.com/Preponderous-Software/darkroom)). `docs/screenshots/transcripts/tests.txt` holds the test-summary lines of the Maven run.
+
 ---
 
 ## Installation
@@ -409,6 +426,47 @@ This project is in active development.
       │
       ▼
     Mock Kubernetes API Client
+
+### Request flow
+
+What `K8sExecuteController` does with each `POST /k8s/execute` request:
+
+```mermaid
+flowchart TD
+    A["POST /k8s/execute<br/>{request_id, user_prompt}"] --> B{"request_id and<br/>user_prompt present?"}
+    B -- no --> R1["400 &quot;&lt;field&gt; is required&quot;<br/>(not audited, not counted)"]
+    B -- yes --> C["CommandParser.parse(prompt)<br/>Bedrock or Anthropic, one command only"]
+    C -- "parse error / multi-command" --> X["audit as blocked<br/>BlockedCommands + latency metrics"]
+    X --> R2["400 reason = error message"]
+    C --> D{"VerbGuard.isAllowed(verb)<br/>allow: get, apply<br/>deny: delete, exec, scale, patch"}
+    D -- no --> Y["audit as blocked<br/>BlockedCommands + latency metrics"]
+    Y --> R3["400 &quot;Verb 'x' is not permitted&quot;"]
+    D -- yes --> E["K8sClientAdapter.execute(command)<br/>(mock cluster output)"]
+    E -- error --> X
+    E --> F["audit as allowed<br/>AllowedCommands + latency metrics"]
+    F -- "audit/metrics error" --> R4["500, allowed: true<br/>(command already ran)"]
+    F --> R5["200 {command, result, allowed: true}"]
+```
+
+### Backends by profile and provider
+
+Which beans Spring wires in, from the `@Profile` and `@ConditionalOnProperty` annotations:
+
+```mermaid
+flowchart LR
+    subgraph parser["CommandParser (llm.provider)"]
+        P1["bedrock (default)<br/>BedrockCommandParser"]
+        P2["anthropic<br/>AnthropicCommandParser"]
+    end
+    subgraph store["AuditService / MetricsEmitter (Spring profile)"]
+        S1["default profile<br/>DynamoDbAuditService<br/>CloudWatchMetricsEmitter"]
+        S2["local profile<br/>PostgresAuditService<br/>NoOpMetricsEmitter"]
+    end
+    C["K8sExecuteController"] --> parser
+    C --> G["VerbGuard"]
+    C --> K["K8sClientAdapter (mock)"]
+    C --> store
+```
 
 ---
 
